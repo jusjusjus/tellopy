@@ -32,7 +32,8 @@ class UDPSocket(socket.socket):
             try:
                 self.response, ip = self.recvfrom(256)
                 self.logger.info('Received msg %s from %s'%(self.response, ip))
-            except Exception:
+            except Exception as e:
+                self.logger.error("receive thread Exception %s, exiting.."%e)
                 break
 
     def set_abort_flag(self):
