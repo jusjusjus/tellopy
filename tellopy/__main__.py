@@ -148,10 +148,10 @@ class ButtonControl(QDialog):
 if __name__ == "__main__":
 
     from .mock import Mock
-    from .control import Control
+    from .control import CommandControl
 
     try:
-        control = Control()
+        control = CommandControl()
     except:
         print("Drone not enabled.")
         control = Mock()
