@@ -109,3 +109,20 @@ func (tello *Tello) videoResponseListener() {
 	}
 }
 ```
+
+## Solution (video connection)
+
+I created a wireless hotspot on my laptop using `Edit Connections...`.  In the
+configuration I have the hotspot the ssid `TELLO-C3AB09` -- same as the drone.
+I connected my phone to the computer-created hotspot, and started the app.
+Using `wireshark`, I was able to spoof out the package sent by the app to
+enable rtp and control.  It's the byte string `63 6f 6e 6e 5f 72 65 71 3a 61
+1e` translating to b"conn_req:a\x61".  The last two bytes b'a\x61' form `7777`
+in uint-16 representation.
+
+Sending this to the tello from the computer, I now started to receive bytes on
+port `7777` and also bytes of varying lengths on port `8889`.  Note that
+enabling the tello by sending `command` we only receive utf-8 csv bytes on port
+`8889`.
+
+
