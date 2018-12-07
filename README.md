@@ -196,6 +196,6 @@ is always `b'\xcc'`).  Then I recorded the changing bytes and in what package
 index the bytes change.  Plotting the two against each other I get the
 following picture:
 
-![](./changing-uint8-of-35byte-package.jpg)
+![](./docs/changing-uint8-of-35byte-package.jpg)
 
 Apparently, index 6 and 7 form a time stamp.
