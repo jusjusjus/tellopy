@@ -125,4 +125,77 @@ port `7777` and also bytes of varying lengths on port `8889`.  Note that
 enabling the tello by sending `command` we only receive utf-8 csv bytes on port
 `8889`.
 
+## Receiving Control Information
 
+When sending the `b"conn_req.."` stuff to port 8889 of the tello, it also
+starts sending UDP packets back to that port on the host.  I started
+examining these packets; and I think they contain sensory information.
+The packets come in 4 different sizes: 12, 13, 35, and 270 bytes.
+
+The packages could contain something like this:
+```
+public class FlyControllerEntity
+{
+  public int batteryLow;
+  public int batteryLower;
+  public int batteryPercentage;
+  public int batteryState;
+  public int cameraState;
+  public int downVisualState;
+  public int droneBatteryLeft;
+  public int droneFlyTimeLeft;
+  public int droneHover;
+  public int eMOpen;
+  public int eMSky;
+  public int eMgroud;
+  public int eastSpeed;
+  public int electricalMachineryState;
+  public int factoryMode;
+  public int flyMode;
+  public int flySpeed;
+  public int flyTime;
+  public int frontIn;
+  public int frontLSC;
+  public int frontOut;
+  public int gravityState;
+  public int groundSpeed;
+  public int height;
+  public int imuCalibrationState;
+  public int imuState;
+  public int lightStrength;
+  public int northSpeed;
+  public int outageRecording;
+  public int powerState;
+  public int pressureState;
+  public int smartVideoExitMode;
+  public int temperatureHeight;
+  public int throwFlyTimer;
+  public int wifiDisturb;
+  public int wifiStrength;
+  public int windState;
+}
+```
+
+### 12-byte packet
+
+One of these packages looks somewhat like this:
+```python
+b"\xcc`\x00'\x885\x00\x1b\x00\x01dp"
+```
+
+### 35-byte packet
+
+One of these packages looks like so:
+
+```python
+ b'\xcc\x18\x01\xb9\x88V\x00\x8c\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Y\x00\x00P\x10\x00\x01\x00\x00\x00\x00\x00\xab\xdb'
+```
+
+Using `numpy`, I transformed the info to `uint8` starting from byte 1 (bytes 0
+is always `b'\xcc'`).  Then I recorded the changing bytes and in what package
+index the bytes change.  Plotting the two against each other I get the
+following picture:
+
+![](./changing-uint8-of-35byte-package.jpg)
+
+Apparently, index 6 and 7 form a time stamp.

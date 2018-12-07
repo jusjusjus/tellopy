@@ -1,45 +1,41 @@
 
+import pickle
 import socket
+import numpy as np
+from .pickle_protocol import PickleProtocol
 
-class Server(socket.socket):
 
-    HOST = '127.0.0.1'
-    PORT = 65401
-    BUFFER_SIZE = 1024
+class Server:
 
-    def __init__(self):
-        super().__init__(socket.AF_INET, socket.SOCK_STREAM)
-        self.bind(self.addr)
-        self.listen()
+    HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+    PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
 
-    def __del__(self):
-        self.shutdown(socket.SHUT_RDWR)
-        self.close()
-
-    @property
+    @classmethod
     def addr(self):
         return (self.HOST, self.PORT)
 
-    def accept(self):
-        conn, addr = super().accept()
-        with conn:
-            print('Connected by', addr)
-            byts = b''
-            while True:
-                b = conn.recv(self.BUFFER_SIZE)
-                byts += b
-                if not b or len(b) < self.BUFFER_SIZE:
-                    break
-            byts = byts[:-1]
-            print("recieved %s bytes"%len(byts))
-
-            print("sending back to %s"%str(addr))
-            sent = 0
-            while sent<len(byts):
-                sent += conn.sendto(byts[sent:sent+self.BUFFER_SIZE], addr)
-            conn.sendto(b'\x00', addr)
+    def socket(self):
+        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def listen(self):
-        super().listen()
-        while True:
-            self.accept()
+        with self.socket() as sock:
+            sock.bind(self.addr())
+            sock.listen()
+            while True:
+                conn, addr = sock.accept()
+                self.serve(conn, addr)
+
+    def _serve(self, conn):
+        with conn:
+            protocol = PickleProtocol(conn)
+            while True:
+                obj = protocol.recv()
+                print("received", obj)
+                protocol.send(obj)
+
+    def serve(self, conn, addr):
+        try:
+            print('Connected by', addr)
+            self._serve(conn)
+        except ConnectionResetError as e:
+            print(e)
