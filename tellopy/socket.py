@@ -5,31 +5,22 @@ import numpy as np
 
 class ControlReceiver(Receiver):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_data = {}
+
     def process_response(self):
-        if len(self.response) == 35:
-            try:
-                data = np.frombuffer(self.response[1:], dtype=np.uint8)
-                if not hasattr(self, 'last_data'):
-                    self.last_data = data
-                for i, (x, y) in enumerate(zip(data, self.last_data)):
-                    if x != y:
-                        print(i, x)
-                # print(', '.join(map(str, data)))
-                self.last_data = data.copy()
-            except Exception as e:
-                print('invalid response (%s)'%str(e), self.response)
-        # if len(self.response) == 270:
-        #     try:
-        #         data = np.frombuffer(self.response[2:], dtype=np.int32)
-        #         if not hasattr(self, 'last_data'):
-        #             self.last_data = data
-        #         for i, (x, y) in enumerate(zip(data, self.last_data)):
-        #             if x != y:
-        #                 print(i, x)
-        #         # print(', '.join(map(str, data)))
-        #         self.last_data = data.copy()
-        #     except Exception as e:
-        #         print('invalid response (%s)'%str(e), self.response)
+        length = len(self.response)
+        try:
+            data = np.frombuffer(self.response, dtype=np.uint8)
+            for i, (x, y) in enumerate(zip(data, self.last_data.get(length, []))):
+                if x != y:
+                    print(length, i, x)
+            self.last_data[length] = data.copy()
+        except Exception as e:
+            print(self.response)
+            print(bytes(self.response))
+            print('invalid response (%s):'%str(e), self.response)
 
 
 class RTPSocket(UDPSocket):
