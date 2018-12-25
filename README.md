@@ -199,3 +199,35 @@ following picture:
 ![](./docs/changing-uint8-of-35byte-package.jpg)
 
 Apparently, index 6 and 7 form a time stamp.
+
+# Capturing Video with `ffmpeg`
+
+The SDK 2 specifies how to enable video.   Send `b'command'` and then `b'streamon'`.
+This will output a stream to port `11111` of your connecting device.  Now you can use
+`ffmpeg` to show the stream:
+
+```
+ffplay udp://192.168.10.3:11111
+```
+
+The video output is 960x720 which is rather large.
+
+This is an excerpt of the output:
+
+```
+Last message repeated 1 times
+[h264 @ 0x7f6dfc0008c0] decode_slice_header error
+[h264 @ 0x7f6dfc0008c0] no frame!
+[h264 @ 0x7f6dfc0008c0] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x7f6dfc0008c0] decode_slice_header error
+[h264 @ 0x7f6dfc0008c0] no frame!
+[h264 @ 0x7f6dfc0008c0] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x7f6dfc0008c0] decode_slice_header error
+[h264 @ 0x7f6dfc0008c0] no frame!
+Input #0, h264, from 'udp://192.168.10.3:11111':B sq=    0B f=0/0   
+  Duration: N/A, bitrate: N/A
+    Stream #0:0: Video: h264 (Main), yuv420p, 960x720, 25 fps, 25 tbr, 1200k tbn, 50 tbc
+    nan M-V:    nan fd=   0 aq=    0KB vq= 2161KB sq=    0B f=0/0   
+```
