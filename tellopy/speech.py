@@ -40,10 +40,54 @@ class Speech(speech_recognition.Recognizer):
         self.continue_listening = False
         self.listener.join()
 
+    def load_model(self):
+        import sys
+        from os.path import dirname, join
+        sys.path.insert(0, join(dirname(__file__), '..', '..', 'voice-control'))
+        from vctrl.model import Model_v3 as Model
+
+        import torch
+        saved_model = torch.load(join(dirname(__file__), '..', '..', 'voice-control', 'records', 'Model_v3.th'))
+        model = Model()
+        class_to_idx = saved_model['class_to_idx']
+        model.load_state_dict(saved_model['state_dict'])
+        self.idx_to_class = {v:k for k, v in class_to_idx.items()}
+        self.model = model.eval()
+
+    def recognize_conv(self, audio):
+        import sys
+        from os.path import dirname, join
+        sys.path.insert(0, join(dirname(__file__), '..', '..', 'voice-control'))
+        from vctrl.data import _sr, crop_fn, downsample
+        import torch
+        import numpy as np
+        from io import BytesIO
+        import scipy.io.wavfile
+        if not hasattr(self, 'model'):
+            self.load_model()
+        def prepare(x):
+            x = crop_fn(2.0)(x)
+            x = downsample(x)
+            return x
+        wav = audio.get_wav_data()
+        sampling_rate, x = scipy.io.wavfile.read(BytesIO(wav))
+        assert sampling_rate == _sr
+        x = prepare(x)
+        x = torch.from_numpy(x)
+        with torch.no_grad():
+            prediction = self.model(x[None, None, :])
+            probs = self.model.probability(prediction)
+        probs = torch.squeeze(probs).numpy()
+        max_idx = np.argmax(probs)
+        return self.idx_to_class[max_idx]
+
     def recognize(self, audio):
-        for recognize in [#self.recognize_google,
-                          #self.recognize_bing,
-                          self.recognize_sphinx]:
+        for recognize in [
+            self.recognize_conv,
+            #self.recognize_google,
+            #self.recognize_bing,
+            #self.recognize_sphinx
+        ]:
             try:
                 self.logger.debug("using {}".format(recognize.__name__))
                 recognized_text = recognize(audio)
@@ -61,7 +105,7 @@ class Speech(speech_recognition.Recognizer):
             self.logger.debug("listening..")
             with self.audio_source as source:
                 self.adjust_for_ambient_noise(source)
-                audio = self.listen(source, timeout=None, phrase_time_limit=5.0)
+                audio = self.listen(source, timeout=None, phrase_time_limit=1.0)
             self.listen_speak_lock.release()
             recognized_text = self.recognize(audio)
             if recognized_text is not None:
@@ -71,6 +115,6 @@ class Speech(speech_recognition.Recognizer):
 
     def adjust_for_ambient_noise(self, source):
         this_time = time.time()
-        if this_time - self.last_time > 10.: # sec
-            super().adjust_for_ambient_noise(source)
+        if this_time - self.last_time > 3.: # sec
+            super().adjust_for_ambient_noise(source, duration=2.0)
             self.last_time = this_time

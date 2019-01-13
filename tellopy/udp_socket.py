@@ -59,7 +59,7 @@ class Receiver(threading.Thread):
                 self.process_response()
                 self.info('recv msg of length %s from %s'%(len(self.response), ip))
             except Exception as e:
-                self.error("recv_thread Exception %s, exiting.."%e)
+                self.error("recv_thread Exception '%s', exiting.."%e)
                 break
 
     def info(self, *args, **kwargs):

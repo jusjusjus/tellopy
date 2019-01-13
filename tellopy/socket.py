@@ -18,9 +18,8 @@ class ControlReceiver(Receiver):
                     print(length, i, x)
             self.last_data[length] = data.copy()
         except Exception as e:
-            print(self.response)
-            print(bytes(self.response))
-            print('invalid response (%s):'%str(e), self.response)
+            self.error(self.response)
+            self.error('invalid response (%s): %s'%(str(e), self.response))
 
 
 class RTPSocket(UDPSocket):
