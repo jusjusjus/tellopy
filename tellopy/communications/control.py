@@ -8,11 +8,7 @@ from .abort_timer import AbortTimer
 class Control:
 
     valid_commands = [
-        # Turn on video stream on port 11111
-        b'streamon',
-        # Turn video stream off
-        b'streamoff',
-        b'command',
+        # flight controls
         b'back 100',
         b'forward 100',
         b'down 100',
@@ -22,6 +18,12 @@ class Control:
         b'ccw 45',
         b'cw 45',
         b'flip b',
+        # Turn on video stream on port 11111
+        b'streamon',
+        # Turn video stream off
+        b'streamoff',
+        # initialize tello
+        b'command',
     ]
 
     drone_addr = (Config.drone_ip, Config.control_port)
@@ -29,11 +31,11 @@ class Control:
 
     def __init__(self):
         self.initialized = False
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     @staticmethod
     def get_my_own_ip():
-        dummy_host = ('8.8.8.8', 53)
+        dummy_host = (Config.drone_ip, Config.controller_port)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.connect(dummy_host)
             ip = sock.getsockname()[0]
@@ -41,17 +43,20 @@ class Control:
         return ip
        
     def init(self):
-        addr = (self.get_my_own_ip(), Config.control_port)
+        addr = (self.get_my_own_ip(), Config.controller_port)
+        print('bind', addr, 'and connect to', self.drone_addr)
         try:
             self.sock.bind(addr)
+            self.sock.connect(self.drone_addr)
         except OSError as e:
             msg = "while binding %s:%s, "%addr + str(e)
             raise OSError(msg)
         response = self.send(b'command')
-        self.initialized = True
+        self.initialized = True#response == Config.OK
         return self
 
     def wait_for_response(self):
+
         response = None
 
         def listen():
@@ -70,14 +75,16 @@ class Control:
         receiver.join(self.response_timeout)
         # receiver timed out if thread is still alive (maybe the connection
         # broke?)
-        return Config.ERROR if receiver.isAlive() else response
+        return Config.TIMEOUT if receiver.isAlive() else response
 
     def check_command(self, cmd: bytes):
         assert self.initialized or cmd == b'command'
-        assert cmd in self.valid_commands
+        assert cmd in self.valid_commands, "%s not in %s"%(cmd, self.valid_commands)
 
     def send(self, cmd: bytes):
+        print('try sending', cmd, 'to', self.drone_addr)
         self.check_command(cmd)
-        self.sock.sendto(cmd, self.drone_addr)
+        self.sock.sendall(cmd)#, self.drone_addr)
         response = self.wait_for_response()
+        print('response', response)
         return response
