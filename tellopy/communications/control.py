@@ -49,6 +49,7 @@ class Control:
             raise OSError(msg)
         response = self.send(b'command')
         self.initialized = True
+        return self
 
     def wait_for_response(self):
         response = None

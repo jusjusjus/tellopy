@@ -1,2 +1,2 @@
 
-from .speech2sdk import PorcupineDemo
+from .hotword_detector import HotwordDetector
