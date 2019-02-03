@@ -1,4 +1,5 @@
 SpeechRecognition>=3.8.1
+mypy==0.660
 numpy>=1.15.4
 pyaudio>=0.2.11
 soundfile>=0.10.2

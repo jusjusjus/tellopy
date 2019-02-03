@@ -1,15 +1,17 @@
-import random
 
-import cv2
-import numpy as np
 import torch
+import random
+import numpy as np
 import torch.nn.functional as F
 
 from . import torch_utils
 
+from typing import List
+
 # Set printoptions
 torch.set_printoptions(linewidth=1320, precision=5, profile='long')
-np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+# format short g, %precision=5
+np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})
 
 
 def prepare_tensor_for_imshow(t: torch.Tensor) -> np.ndarray:
@@ -19,19 +21,17 @@ def prepare_tensor_for_imshow(t: torch.Tensor) -> np.ndarray:
     return img.astype(np.uint8)
 
 
-def init_seeds(seed=0):
+def init_seeds(seed: int=0):
     random.seed(seed)
     np.random.seed(seed)
     torch_utils.init_seeds(seed=seed)
 
 
-def load_classes(path):
-    """
-    Loads class labels at 'path'
-    """
-    fp = open(path, 'r')
-    names = fp.read().split('\n')
-    return list(filter(None, names))  # filter removes empty strings (such as last line)
+def load_classes(path: str) -> List[str]:
+    """Loads class labels at `path`"""
+    names = open(path, 'r').read().split('\n')
+    # filter removes empty strings (such as last line)
+    return list(filter(None, names))
 
 
 def model_info(model):  # Plots a line-by-line description of a PyTorch model
@@ -45,7 +45,7 @@ def model_info(model):  # Plots a line-by-line description of a PyTorch model
     print('Model Summary: %g layers, %g parameters, %g gradients\n' % (i + 1, n_p, n_g))
 
 
-def class_weights():  # frequency of each class in coco train2014
+def class_weights() -> torch.FloatTensor:  # frequency of each class in coco train2014
     weights = 1 / torch.FloatTensor(
         [187437, 4955, 30920, 6033, 3838, 4332, 3160, 7051, 7677, 9167, 1316, 1372, 833, 6757, 7355, 3302, 3776, 4671,
          6769, 5706, 3908, 903, 3686, 3596, 6200, 7920, 8779, 4505, 4272, 1862, 4698, 1962, 4403, 6659, 2402, 2689,
@@ -54,19 +54,6 @@ def class_weights():  # frequency of each class in coco train2014
          1877, 17630, 4337, 4624, 1075, 3468, 135, 1380])
     weights /= weights.sum()
     return weights
-
-
-def plot_one_box(x, img, color=None, label=None, line_thickness=None):  # Plots one bounding box on image img
-    tl = line_thickness or round(0.002 * max(img.shape[0:2])) + 1  # line thickness
-    color = color or [random.randint(0, 255) for _ in range(3)]
-    c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
-    cv2.rectangle(img, c1, c2, color, thickness=tl)
-    if label:
-        tf = max(tl - 1, 1)  # font thickness
-        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-        cv2.rectangle(img, c1, c2, color, -1)  # filled
-        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
 
 def weights_init_normal(m):
@@ -97,14 +84,19 @@ def xywh2xyxy(x):  # Convert bounding box format from [x, y, w, h] to [x1, y1, x
 
 
 def ap_per_class(tp, conf, pred_cls, target_cls):
-    """ Compute the average precision, given the recall and precision curves.
+
+    """Compute the average precision, given the recall and precision curves.
+
     Method originally from https://github.com/rafaelpadilla/Object-Detection-Metrics.
-    # Arguments
+
+    Parameters
+    ----------
         tp:    True positives (list).
         conf:  Objectness value from 0-1 (list).
         pred_cls: Predicted object classes (list).
         target_cls: True object classes (list).
-    # Returns
+    Returns
+    -------
         The average precision as computed in py-faster-rcnn.
     """
 
@@ -152,11 +144,15 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
 
 def compute_ap(recall, precision):
     """ Compute the average precision, given the recall and precision curves.
+
     Code originally from https://github.com/rbgirshick/py-faster-rcnn.
-    # Arguments
+
+    Parameters
+    ----------
         recall:    The recall curve (list).
         precision: The precision curve (list).
-    # Returns
+    Returns
+    -------
         The average precision as computed in py-faster-rcnn.
     """
     # correct AP calculation
@@ -305,6 +301,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     Removes detections with lower object confidence score than 'conf_thres' and performs
     Non-Maximum Suppression to further filter detections.
     Returns detections with shape:
+
+    Returns
+    -------
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
 
@@ -338,21 +337,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                         a = a[mask]
             pred = a
 
-        # Experiment: Prior class size rejection
-        # x, y, w, h = pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3]
-        # a = w * h  # area
-        # ar = w / (h + 1e-16)  # aspect ratio
-        # n = len(w)
-        # log_w, log_h, log_a, log_ar = torch.log(w), torch.log(h), torch.log(a), torch.log(ar)
-        # shape_likelihood = np.zeros((n, 60), dtype=np.float32)
-        # x = np.concatenate((log_w.reshape(-1, 1), log_h.reshape(-1, 1)), 1)
-        # from scipy.stats import multivariate_normal
-        # for c in range(60):
-        # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
-
         class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
-
-        v = ((pred[:, 4] > conf_thres) & (class_prob > .3))  # TODO examine arbitrary 0.3 thres here
+        # TODO examine arbitrary 0.3 thres here
+        v = ((pred[:, 4] > conf_thres) & (class_prob > 0.3))
         v = v.nonzero().squeeze()
         if len(v.shape) == 0:
             v = v.unsqueeze(0)
@@ -421,7 +408,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
 
 def strip_optimizer_from_checkpoint(filename='weights/best.pt'):
-    # Strip optimizer from *.pt files for lighter files (reduced by 2/3 size)
+    """Strip optimizer from *.pt files for lighter files
+
+    reduced by 2/3 size"""
+
     import torch
     a = torch.load(filename, map_location='cpu')
     a['optimizer'] = []
@@ -429,7 +419,7 @@ def strip_optimizer_from_checkpoint(filename='weights/best.pt'):
 
 
 def coco_class_count(path='../coco/labels/train2014/'):
-    # histogram of occurrences per class
+    """histogram of occurrences per class"""
     import glob
 
     nC = 80  # number classes
@@ -442,7 +432,7 @@ def coco_class_count(path='../coco/labels/train2014/'):
 
 
 def plot_results():
-    # Plot YOLO training results file 'results.txt'
+    """Plot YOLO training results file 'results.txt'"""
     import glob
     import numpy as np
     import matplotlib.pyplot as plt

@@ -1,17 +1,22 @@
+
 from collections import defaultdict
 
+import numpy as np
+
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-from .parse_config import *
-from .utils import *
+from .parse_config import parse_model_config
+from .utils import class_weights, build_targets
 
-ONNX_EXPORT = False
+from typing import Tuple, Dict, List, Any
 
+ONNX_EXPORT: bool = False
 
-def create_modules(module_defs):
-    """
-    Constructs module list of layer blocks from module configuration in module_defs
-    """
+def create_modules(module_defs: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], List[nn.Module]]:
+    """Constructs module list of layer blocks from module configuration in
+    module_defs"""
     hyperparams = module_defs.pop(0)
     output_filters = [int(hyperparams['channels'])]
     module_list = nn.ModuleList()
@@ -59,8 +64,9 @@ def create_modules(module_defs):
         elif module_def['type'] == 'yolo':
             anchor_idxs = [int(x) for x in module_def['mask'].split(',')]
             # Extract anchors
-            anchors = [float(x) for x in module_def['anchors'].split(',')]
-            anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
+            anchor_list = [float(x) for x in module_def['anchors'].split(',')]
+            anchors = [(anchor_list[i], anchor_list[i + 1])
+                    for i in range(0, len(anchor_list), 2)]
             anchors = [anchors[i] for i in anchor_idxs]
             num_classes = int(module_def['classes'])
             img_height = int(hyperparams['height'])
@@ -83,34 +89,38 @@ class EmptyLayer(nn.Module):
 
 
 class Upsample(nn.Module):
-    # Custom Upsample layer (nn.Upsample gives deprecated warning message)
+    """Custom Upsample layer (nn.Upsample gives deprecated warning message)"""
 
-    def __init__(self, scale_factor=1, mode='nearest'):
+    def __init__(self, scale_factor: int=1, mode: str='nearest'):
         super(Upsample, self).__init__()
         self.scale_factor = scale_factor
         self.mode = mode
 
-    def forward(self, x):
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
         return F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
 
 
 class YOLOLayer(nn.Module):
 
-    def __init__(self, anchors, nC, img_dim, anchor_idxs, cfg):
+    def __init__(self, anchors: List[Tuple[float, float]], nC: int,
+            img_dim: int, anchor_idxs: List[int], cfg: str):
         super(YOLOLayer, self).__init__()
 
         anchors = [(a_w, a_h) for a_w, a_h in anchors]  # (pixels)
         nA = len(anchors)
 
         self.anchors = anchors
-        self.nA = nA  # number of anchors (3)
-        self.nC = nC  # number of classes (80)
+        # number of anchors = 3:
+        self.nA = nA
+        # number of classes = 80:
+        self.nC = nC
         self.bbox_attrs = 5 + nC
-        self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
+        # from hyperparams in cfg file, NOT from parser
+        self.img_dim = img_dim
 
-        if anchor_idxs[0] == (nA * 2):  # 6
+        if anchor_idxs[0] == 2*nA: # 6
             stride = 32
-        elif anchor_idxs[0] == nA:  # 3
+        elif anchor_idxs[0] == nA: # 3
             stride = 16
         else:
             stride = 8
@@ -119,7 +129,8 @@ class YOLOLayer(nn.Module):
             stride *= 2
 
         # Build anchor grids
-        nG = int(self.img_dim / stride)  # number grid points
+        # number grid points
+        nG = int(self.img_dim / stride)
         self.grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).float()
         self.anchor_wh = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])  # scale anchors
@@ -131,7 +142,8 @@ class YOLOLayer(nn.Module):
         self.yolo_layer = anchor_idxs[0] / nA  # 2, 1, 0
         self.stride = stride
 
-        if ONNX_EXPORT:  # use fully populated and reshaped tensors
+        # use fully populated and reshaped tensors
+        if ONNX_EXPORT:
             self.anchor_w = self.anchor_w.repeat((1, 1, nG, nG)).view(1, -1, 1)
             self.anchor_h = self.anchor_h.repeat((1, 1, nG, nG)).view(1, -1, 1)
             self.grid_x = self.grid_x.repeat(1, nA, 1, 1).view(1, -1, 1)
@@ -139,10 +151,12 @@ class YOLOLayer(nn.Module):
             self.grid_xy = torch.cat((self.grid_x, self.grid_y), 2)
             self.anchor_wh = torch.cat((self.anchor_w, self.anchor_h), 2) / nG
 
-    def forward(self, p, targets=None, batch_report=False, var=None):
+    def forward(self, p, targets=None, batch_report: bool=False, var=None):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        bs = p.shape[0]  # batch size
-        nG = p.shape[2]  # number of grid points
+        # batch size
+        bs = p.shape[0]
+        # number of grid points
+        nG = p.shape[2]
 
         if p.is_cuda and not self.weights.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -169,12 +183,6 @@ class YOLOLayer(nn.Module):
             h = p[..., 3]  # Height
             width = torch.exp(w.data) * self.anchor_w
             height = torch.exp(h.data) * self.anchor_h
-
-            # Width and height (power method)
-            # w = torch.sigmoid(p[..., 2])  # Width
-            # h = torch.sigmoid(p[..., 3])  # Height
-            # width = ((w.data * 2) ** 2) * self.anchor_w
-            # height = ((h.data * 2) ** 2) * self.anchor_h
 
             p_boxes = None
             if batch_report:
@@ -263,7 +271,7 @@ class YOLOLayer(nn.Module):
 class Darknet(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, cfg_path, img_size=416):
+    def __init__(self, cfg_path: str, img_size: int=416):
         super(Darknet, self).__init__()
 
         self.module_defs = parse_model_config(cfg_path)
@@ -333,7 +341,7 @@ class Darknet(nn.Module):
         return sum(output) if is_training else torch.cat(output, 1)
 
 
-def load_weights(self, weights_path, cutoff=-1):
+def load_weights(self, weights_path: str, cutoff: int=-1):
     # Parses and loads the weights stored in 'weights_path'
     # @:param cutoff  - save layers between 0 and cutoff (cutoff = -1 -> all are saved)
 
@@ -343,15 +351,14 @@ def load_weights(self, weights_path, cutoff=-1):
         cutoff = 16
 
     # Open the weights file
-    fp = open(weights_path, 'rb')
-    header = np.fromfile(fp, dtype=np.int32, count=5)  # First five are header values
+    with open(weights_path, 'rb') as fp:
+        header = np.fromfile(fp, dtype=np.int32, count=5)  # First five are header values
 
-    # Needed to write header when saving weights
-    self.header_info = header
+        # Needed to write header when saving weights
+        self.header_info = header
 
-    self.seen = header[3]
-    weights = np.fromfile(fp, dtype=np.float32)  # The rest are weights
-    fp.close()
+        self.seen = header[3]
+        weights = np.fromfile(fp, dtype=np.float32)  # The rest are weights
 
     ptr = 0
     for i, (module_def, module) in enumerate(zip(self.module_defs[:cutoff], self.module_list[:cutoff])):

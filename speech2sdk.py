@@ -1,14 +1,16 @@
 
 import argparse
 from time import sleep
+import socket
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 # connect to mock drone
 from tellopy.communications.config import Config
-# Config.drone_ip = '127.0.0.1'
-# Config.controller_port = 12345
+Config.drone_ip = '127.0.0.1'
+Config.controller_port = 12345
+Config.socket_config = socket.SOCK_STREAM
 
 from tellopy.speech import HotwordDetector  
 from tellopy.speech2sdk import Speech2sdk

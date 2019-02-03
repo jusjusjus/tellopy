@@ -1,8 +1,12 @@
-import glob
+
+from os.path import join, splitext, isfile
+from glob import glob
 import math
 import os
 import random
 from sys import platform
+
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -12,13 +16,18 @@ import torch
 from .utils import xyxy2xywh
 
 
-class load_images():  # for inference
-    def __init__(self, path, batch_size=1, img_size=416):
+class load_images:
+    """for inference"""
+    
+    def __init__(self, path: str, batch_size: int=1, img_size: int=416):
         if os.path.isdir(path):
+            # get all files in dir `path` of image formats:
             image_format = ['.jpg', '.jpeg', '.png', '.tif']
-            self.files = sorted(glob.glob('%s/*.*' % path))
-            self.files = list(filter(lambda x: os.path.splitext(x)[1].lower() in image_format, self.files))
-        elif os.path.isfile(path):
+            self.files: List[str] = sorted(glob(join(path, '*.*')))
+            self.files = list(filter(lambda x: splitext(x)[1].lower() in image_format, self.files))
+        elif isfile(path):
+            # `path` is pointing to a single file
+            assert splitext(path)[1].lower() in image_format
             self.files = [path]
 
         self.nF = len(self.files)  # number of image files
@@ -26,17 +35,17 @@ class load_images():  # for inference
         self.batch_size = batch_size
         self.height = img_size
 
-        assert self.nF > 0, 'No images found in path %s' % path
+        assert self.nF > 0, 'No images found in path "%s"' % path
 
         # RGB normalization values
         # self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
         # self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
 
     def __iter__(self):
-        self.count = -1
+        self.count: int = -1
         return self
 
-    def __next__(self):
+    def __next__(self) -> Tuple[List[str], np.ndarray]:
         self.count += 1
         if self.count == self.nB:
             raise StopIteration
@@ -45,8 +54,9 @@ class load_images():  # for inference
         # Read image
         img = cv2.imread(img_path)  # BGR
 
-        # Padded resize
-        img, _, _, _ = resize_square(img, height=self.height, color=(127.5, 127.5, 127.5))
+        # Padded resize (mypy complains about float tuple
+        # img, _, _, _ = resize_square(img, height=self.height, color=(127.5, 127.5, 127.5))
+        img, _, _, _ = resize_square(img, height=self.height, color=(127, 127, 127))
 
         # Normalize RGB
         img = img[:, :, ::-1].transpose(2, 0, 1)
@@ -57,16 +67,18 @@ class load_images():  # for inference
 
         return [img_path], img
 
-    def __len__(self):
-        return self.nB  # number of batches
+    def __len__(self) -> int:
+        """return number of batches"""
+        return self.nB  
 
 
-class load_images_and_labels():  # for training
-    def __init__(self, path, batch_size=1, img_size=608, multi_scale=False, augment=False):
-        self.path = path
-        # self.img_files = sorted(glob.glob('%s/*.*' % path))
-        with open(path, 'r') as file:
-            self.img_files = file.readlines()
+class load_images_and_labels:
+    """for training"""
+    
+    def __init__(self, path: str, batch_size: int=1, img_size: int=608, multi_scale: bool=False, augment: bool=False):
+        self.path: str = path
+        with open(path, 'r') as fo:
+            self.img_files = fo.readlines()
 
         self.img_files = [path.replace('\n', '') for path in self.img_files]
         self.label_files = [path.replace('images', 'labels').replace('.png', '.txt').replace('.jpg', '.txt') for path in
@@ -90,7 +102,7 @@ class load_images_and_labels():  # for training
         self.shuffled_vector = np.random.permutation(self.nF) if self.augment else np.arange(self.nF)
         return self
 
-    def __next__(self):
+    def __next__(self) -> Tuple[torch.FloatTensor, List[torch.FloatTensor]]:
         self.count += 1
         if self.count == self.nB:
             raise StopIteration
@@ -138,7 +150,8 @@ class load_images_and_labels():  # for training
                 cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)
 
             h, w, _ = img.shape
-            img, ratio, padw, padh = resize_square(img, height=height, color=(127.5, 127.5, 127.5))
+            # img, ratio, padw, padh = resize_square(img, height=height, color=(127.5, 127.5, 127.5))
+            img, ratio, padw, padh = resize_square(img, height=height, color=(127, 127, 127))
 
             # Load labels
             if os.path.isfile(label_path):
@@ -189,19 +202,19 @@ class load_images_and_labels():  # for training
             labels_all.append(torch.from_numpy(labels))
 
         # Normalize
-        img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
-        img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        # img_all -= self.rgb_mean
-        # img_all /= self.rgb_std
-        img_all /= 255.0
+        images = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
+        images = np.ascontiguousarray(images, dtype=np.float32)
+        # images -= self.rgb_mean
+        # images /= self.rgb_std
+        images /= 255.0
 
-        return torch.from_numpy(img_all), labels_all
+        return torch.from_numpy(images), labels_all
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.nB  # number of batches
 
 
-def resize_square(img, height=416, color=(0, 0, 0)):  # resize a rectangular image to a padded square
+def resize_square(img: np.ndarray, height: int=416, color: Tuple[int, int, int]=(0, 0, 0)):  # resize a rectangular image to a padded square
     shape = img.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)  # ratio  = old / new
     new_shape = [round(shape[0] * ratio), round(shape[1] * ratio)]
@@ -213,8 +226,8 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resize a rectangular ima
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color), ratio, dw // 2, dh // 2
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2),
-                  borderValue=(127.5, 127.5, 127.5)):
+def random_affine(img: np.ndarray, targets=None, degrees: Tuple[int, int]=(-10, 10), translate: Tuple[float, float]=(.1, .1), scale: Tuple[float, float]=(.9, 1.1), shear: Tuple[int, int]=(-2, 2),
+        borderValue: Tuple[float, float, float]=(127.5, 127.5, 127.5)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
@@ -284,10 +297,9 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp(p='../xview/val_images_bmp'):
-    import glob
+def convert_tif2bmp(p: str='../xview/val_images_bmp'):
     import cv2
-    files = sorted(glob.glob('%s/*.tif' % p))
+    files = sorted(glob(join(p, '*.tif')))
     for i, f in enumerate(files):
         print('%g/%g' % (i + 1, len(files)))
         cv2.imwrite(f.replace('.tif', '.bmp'), cv2.imread(f))

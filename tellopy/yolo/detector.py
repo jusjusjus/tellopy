@@ -9,29 +9,30 @@ from .utils import load_classes
 from collections import namedtuple
 from skimage.transform import resize
 
+from typing import List
+
 Detection = namedtuple('Detection', 'x1 y1 x2 y2 conf cls_conf cls_pred')
 
 class Detector:
 
-    weights_path = join(dirname(__file__), 'weights', 'yolov3.pt')
-    config_path = join(dirname(__file__), 'config', 'yolov3.cfg')
-    class_path = join(dirname(__file__), 'data', 'coco.names')
-    conf_thres = 0.8
-    nms_thres = 0.4
-    img_size = 416
+    weights_path: str = join(dirname(__file__), 'weights', 'yolov3.pt')
+    config_path: str = join(dirname(__file__), 'config', 'yolov3.cfg')
+    class_path: str = join(dirname(__file__), 'data', 'coco.names')
+    conf_thres: float = 0.8
+    nms_thres: float = 0.4
+    img_size: int = 416
 
     def __init__(self):
-        self.model = Darknet(self.config_path, img_size=self.img_size)
+        self.model: Darknet = Darknet(self.config_path, img_size=self.img_size)
         self.load_weights()
-        self._eval = False
+        self._eval: bool = False
 
     def load_weights(self):
-        # self.model.load_weights(self.weights_path)
         if self.weights_path.endswith('.pt'):  # pytorch format
             checkpoint = torch.load(self.weights_path, map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
             del checkpoint
-        else:  # darknet format
+        else: # darknet format
             load_weights(self.model, self.weights_path)
 
     @property
@@ -85,9 +86,9 @@ class Detector:
         return detections
 
     @property
-    def classes(self):
+    def classes(self) -> List[str]:
         try:
             return self._classes
         except AttributeError:
-            self._classes = load_classes(self.class_path)
+            self._classes: List[str] = load_classes(self.class_path)
             return self.classes
