@@ -7,7 +7,7 @@ from subprocess import check_output
 from typing import Tuple, List, Dict, Any, Callable
 
 # Set the drone to listen to 'loopback'
-from .config import Config
+from ..communications.config import Config
 Config.drone_ip = '127.0.0.1'
 Config.control_port = 8889
 
