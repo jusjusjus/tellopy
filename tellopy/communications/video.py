@@ -45,19 +45,20 @@ class Video:
             if self.stop_signal_received:
                 break
 
-    def start(self, timeout=1.0):
+    def start(self, timeout=1.0, blocking=True):
         self.thread = Thread(target=self._read_frames_from_container)
         self.thread.daemon = True
         self.stop_signal_received = False
         self.thread.start()
-        timer = AbortTimer(timeout)
-        while not timer.abort:
-            if self.frame is None:
-                sleep(0.1)
+        if blocking:
+            timer = AbortTimer(timeout)
+            while not timer.abort:
+                if self.frame is None:
+                    sleep(0.1)
+                else:
+                    break
             else:
-                break
-        else:
-            raise IOError
+                raise IOError
 
     def stop(self):
         self.stop_signal_received = True

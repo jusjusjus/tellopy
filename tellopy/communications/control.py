@@ -18,7 +18,7 @@ class Control:
         b'ccw 45',
         b'cw 45',
         b'flip b',
-        # Turn on video stream on port 11111
+        # Turn on video stream
         b'streamon',
         # Turn video stream off
         b'streamoff',
@@ -31,7 +31,7 @@ class Control:
 
     def __init__(self):
         self.initialized = False
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock = socket.socket(socket.AF_INET, Config.socket_config)
 
     @staticmethod
     def get_my_own_ip():
@@ -52,39 +52,36 @@ class Control:
             msg = "while binding %s:%s, "%addr + str(e)
             raise OSError(msg)
         response = self.send(b'command')
-        self.initialized = True#response == Config.OK
+        self.initialized = response == Config.OK
         return self
 
     def wait_for_response(self):
 
-        response = None
-
         def listen():
             while True:
                 try:
-                    response, ip = self.sock.recvfrom(128)
+                    self._response, ip = self.sock.recvfrom(128)
                     break
                 except Exception as e:
                     print("recv_thread Exception '%s', exiting.."%e)
-                    response = Config.ERROR
+                    self._response = Config.ERROR
                     break
 
         receiver = Thread(target=listen)
         receiver.deamon = True
+        self._response = None
         receiver.start()
         receiver.join(self.response_timeout)
-        # receiver timed out if thread is still alive (maybe the connection
-        # broke?)
-        return Config.TIMEOUT if receiver.isAlive() else response
+        # receiver timed out if is still alive (maybe the connection broke?)
+        return Config.TIMEOUT if receiver.isAlive() else self._response
 
     def check_command(self, cmd: bytes):
         assert self.initialized or cmd == b'command'
         assert cmd in self.valid_commands, "%s not in %s"%(cmd, self.valid_commands)
 
     def send(self, cmd: bytes):
-        print('try sending', cmd, 'to', self.drone_addr)
         self.check_command(cmd)
-        self.sock.sendall(cmd)#, self.drone_addr)
+        self.sock.sendall(cmd)
         response = self.wait_for_response()
-        print('response', response)
+        print(self.drone_addr, "upon '%s':"%cmd, response)
         return response

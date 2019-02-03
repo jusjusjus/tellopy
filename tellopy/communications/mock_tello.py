@@ -59,7 +59,12 @@ class MockTello(Thread):
             return Config.ERROR
 
         def ffmpeg_stream():
-            check_output(['ffplay', '-i', '/dev/video0'])
+            check_output(['ffmpeg',
+                '-i', '/dev/video0',
+                '-s', '320x240', # video size in px
+                '-r', '5', # frames per second
+                '-f', 'mpegts', # MPEG transport stream
+                'udp://%s:%s'%(Config.drone_ip, Config.video_port)])
 
         self.video = Thread(target=ffmpeg_stream)
         self.video.deamon = True

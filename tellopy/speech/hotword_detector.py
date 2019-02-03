@@ -40,7 +40,6 @@ class HotwordDetector(Thread):
     keyword_file_dir = join(dirname(__file__), 'resources')
 
     def __init__(self, callback, sensitivities=0.5, input_device_index=None):
-
         """
         Constructor.
 
@@ -50,9 +49,8 @@ class HotwordDetector(Thread):
         :param input_device_index: Optional argument. If provided, audio is recorded from this input device. Otherwise,
         the default audio input device is used.
         """
-
         super().__init__()
-
+        self.deamon = True
         self.input_device_index = input_device_index
         self.callback = callback
         self.keyword_file_paths = glob(join(self.keyword_file_dir, '*.ppn'))
@@ -118,13 +116,10 @@ class HotwordDetector(Thread):
     @classmethod
     def show_audio_devices_info(cls):
         """ Provides information regarding different audio devices available. """
-
         pa = pyaudio.PyAudio()
-
         for i in range(pa.get_device_count()):
             info = pa.get_device_info_by_index(i)
             print(', '.join("'%s': '%s'" % (k, str(info[k])) for k in cls._AUDIO_DEVICE_INFO_KEYS))
-
         pa.terminate()
 
 def _default_library_path():
