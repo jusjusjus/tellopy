@@ -1,2 +1,2 @@
 
-import yolo
+from . import yolo

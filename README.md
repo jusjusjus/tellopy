@@ -6,6 +6,12 @@ Tello controller library with all perks.
 - Connect to 192.168.10.1:8889
 - Listen to 192.168.10.2:8889
 
+# Install
+
+```bash
+$ pip install -r requirements.txt
+$ conda install -c conda-forge av
+```
 
 # Scanning UDP Ports
 
