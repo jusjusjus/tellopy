@@ -4,10 +4,11 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument('--test', action='store_true', help='Run speech2sdk in test mode')
-args = parser.parse_args()
+parser.add_argument('--tiny', action='store_true', help='Load tiny object detection model')
+opt = parser.parse_args()
 
 
-if args.test:
+if opt.test:
     import logging
     logging.basicConfig(level=logging.DEBUG)
     from tellopy.mock.tello import MockTello
@@ -28,8 +29,9 @@ import matplotlib.patches as patches
 from time import sleep
 import socket
 
-Detector.weights_path = "./tellopy/yolo/weights/yolov3-tiny.pt"
-Detector.config_path = "./tellopy/yolo/config/yolov3-tiny.cfg"
+if opt.tiny:
+    Detector.weights_path = "./tellopy/yolo/weights/yolov3-tiny.pt"
+    Detector.config_path = "./tellopy/yolo/config/yolov3-tiny.cfg"
 
 detector = Detector()
 detector.conf_thres = 0.4
@@ -82,7 +84,7 @@ while True:
 
     fig.canvas.draw()
 
-if args.test:
+if opt.test:
     server.join(timeout=0.5)
     server.close()
     del server
