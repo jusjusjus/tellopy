@@ -1,11 +1,14 @@
 
-import socket
-from threading import Thread
-
 from .config import Config
 from .abort_timer import AbortTimer
 
+import socket
+import logging
+from threading import Thread
+
 class Control:
+
+    logger = logging.getLogger(name='Control')
 
     valid_commands = [
         # flight controls
@@ -44,7 +47,7 @@ class Control:
        
     def init(self):
         addr = (self.get_my_own_ip(), Config.controller_port)
-        print('bind', addr, 'and connect to', self.drone_addr)
+        self.logger.info("bind %s and connect to %s"%(addr, self.drone_addr))
         try:
             self.sock.bind(addr)
             self.sock.connect(self.drone_addr)
@@ -63,7 +66,7 @@ class Control:
                     self._response, ip = self.sock.recvfrom(128)
                     break
                 except Exception as e:
-                    print("recv_thread Exception '%s', exiting.."%e)
+                    self.logger.error("recv_thread Exception '%s', exiting.."%e)
                     self._response = Config.ERROR
                     break
 
@@ -83,5 +86,5 @@ class Control:
         self.check_command(cmd)
         self.sock.sendall(cmd)
         response = self.wait_for_response()
-        print(self.drone_addr, "upon '%s':"%cmd, response)
+        self.logger.info("reply of %s to %s: %s"%(self.drone_addr, cmd, response))
         return response

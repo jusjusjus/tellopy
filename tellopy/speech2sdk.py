@@ -22,14 +22,14 @@ class Speech2sdk:
         'video': 'streamon',
     }
 
-    def __init__(self, test=False):
-        self.initialize_control(test)
+    def __init__(self):
+        self.initialize_control()
         self.actions = {
             b'streamon': self.init_video,
         }
 
-    def initialize_control(self, test):
-        self.control = None if test else Control().init()
+    def initialize_control(self):
+        self.control = Control().init()
 
     def init_video(self):
         self.video = Video("udp://%s:%s"%(Config.drone_ip, Config.video_port))

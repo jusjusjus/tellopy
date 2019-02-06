@@ -1,6 +1,7 @@
 
 import re
 import socket
+import logging
 from threading import Thread
 from subprocess import check_output
 
@@ -10,25 +11,15 @@ from typing import Tuple, List, Dict, Any, Callable
 from ..communications.config import Config
 Config.drone_ip = '127.0.0.1'
 Config.control_port = 8889
-
-class TelloProtocol:
-
-    def __init__(self, conn):
-        self.conn = conn
-        self.data = b''
-
-    def send(self, txt):
-        self.conn.sendall(txt)
-
-    def recv(self):
-        return self.conn.recvfrom(128)
-
+Config.controller_port = 33333
+Config.socket_config = socket.SOCK_STREAM
 
 class MockTello(Thread):
 
     HOST: str = Config.drone_ip
     PORT: int = Config.control_port
     cmd_with_params_re = re.compile(r'[a-zA-Z]*. \d')
+    logger = logging.getLogger(name="MockTello")
 
     def __init__(self):
         super().__init__(target=self.listen)
@@ -79,7 +70,7 @@ class MockTello(Thread):
             return Config.ERROR
         else:
             self.drone_initialized = True
-            print("Mock Drone initialized")
+            self.logger.info("Mock Drone initialized")
             return Config.OK
 
     def match_cmd_with_params(self, msg: str) -> Tuple[str, int]:
@@ -97,16 +88,16 @@ class MockTello(Thread):
         except UnicodeDecodeError:
             raise BrokenPipeError
         try:
-            print("process for single-command action", msg_str)
+            self.logger.info("process for single-command action '%s'"%msg_str)
             return self.actions[msg_str]()
         except KeyError:
-            print("process for command with params", msg_str)
+            self.logger.info("process for command with params '%s'"%msg_str)
             # process commands with parameters
             try:
                 cmd, val = self.match_cmd_with_params(msg_str)
                 return self.actions[cmd](int(val))
             except (AttributeError, AssertionError) as err:
-                print(err)
+                self.logger.error(err)
                 return Config.ERROR
 
     def _serve(self, conn):
@@ -121,7 +112,7 @@ class MockTello(Thread):
     def serve(self, conn, addr):
         try:
             with conn:
-                print('Connected by', addr)
+                self.logger.info("Connected by '%s'"%str(addr))
                 self._serve(conn)
-        except ConnectionResetError as e:
-            print(e)
+        except ConnectionResetError as err:
+            self.logger.error(err)

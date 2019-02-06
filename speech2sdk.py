@@ -1,16 +1,19 @@
 
-import argparse
-from time import sleep
-import socket
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+from argparse import ArgumentParser
 
-# connect to mock drone
-from tellopy.communications.config import Config
-Config.drone_ip = '127.0.0.1'
-Config.controller_port = 12345
-Config.socket_config = socket.SOCK_STREAM
+parser = ArgumentParser()
+parser.add_argument('--test', action='store_true', help='Run speech2sdk in test mode')
+args = parser.parse_args()
+
+
+if args.test:
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    from tellopy.mock.tello import MockTello
+    print("Starting mock server ..")
+    server = MockTello()
+    server.start()
 
 from tellopy.speech import HotwordDetector  
 from tellopy.speech2sdk import Speech2sdk
@@ -19,6 +22,12 @@ from tellopy.communications.control import Control
 from tellopy.yolo.utils import prepare_tensor_for_imshow
 from tellopy.yolo.detector import Detector
 
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+from time import sleep
+import socket
+
 Detector.weights_path = "./tellopy/yolo/weights/yolov3-tiny.pt"
 Detector.config_path = "./tellopy/yolo/config/yolov3-tiny.cfg"
 
@@ -26,11 +35,7 @@ detector = Detector()
 detector.conf_thres = 0.4
 detector.eval = True
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--test', action='store_true')
-args = parser.parse_args()
-
-speech_control = Speech2sdk(args.test)
+speech_control = Speech2sdk()
 speech_control.run_hotword_detector()
 
 while True:
@@ -40,7 +45,8 @@ while True:
     sleep(1.0)
 
 plt.ion()
-fig, ax = plt.subplots(1)
+fig = plt.figure(figsize=(10, 10))
+ax = plt.subplot(111, xticks=[], yticks=[], frameon=False)
 plt.show(block=False)
 img_obj = None
 
@@ -75,3 +81,8 @@ while True:
                     verticalalignment='top', bbox={'color': 'k', 'pad': 0})
 
     fig.canvas.draw()
+
+if args.test:
+    server.join(timeout=0.5)
+    server.close()
+    del server
