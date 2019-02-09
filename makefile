@@ -1,7 +1,7 @@
 
 test:
 	mypy --ignore-missing-imports tellopy
-	pytest
+	pytest --cov
 
 install:
 	pip install -r requirements.txt

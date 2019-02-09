@@ -1,0 +1,2 @@
+[run]
+omit = tellopy/communications/test_*
