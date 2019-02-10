@@ -1,6 +1,7 @@
 mypy==0.660
 numpy==1.15.4
 pytest==4.2.0
+panda3d==1.10.0
 pyaudio==0.2.11
 soundfile==0.10.2
 pytest-cov==2.6.1
