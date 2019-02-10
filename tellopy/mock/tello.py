@@ -17,7 +17,7 @@ Config.socket_config = SOCK_STREAM
 
 class Tello(Thread):
 
-    cmd_with_params_re = re.compile(r'[a-zA-Z]*. \d')
+    cmd_with_params_re = re.compile(r'[a-zA-Z]*. \d*.')
     logger = logging.getLogger(name="MockTello")
 
     def __init__(self):
@@ -52,7 +52,19 @@ class Tello(Thread):
             return Config.ERROR
         self.video = Video.run_in_thread()
         self.stream_is_on = True
+        for cmd in ('flyback', 'forward', 'cw', 'ccw'):
+            self.actions[cmd] = self.movement_control_factory(cmd)
         return Config.OK
+
+    def movement_control_factory(self, cmd: str):
+        def fn(x):
+            try:
+                self.video.messenger.send(cmd)
+                return Config.OK
+            except AttributeError as err:
+                print(str(err))
+                return Config.ERROR
+        return fn
 
     def init_tello(self) -> bytes:
         """initializes tello, returns `Config.ERROR` if already initialized"""
@@ -67,7 +79,7 @@ class Tello(Thread):
         matches = self.cmd_with_params_re.match(msg)
         assert matches is not None
         match = matches.group()
-        assert len(match) == len(msg)
+        assert len(match) == len(msg), "match: %s, msg: %s"%(str(match), msg)
         cmd, val = match.split(' ')
         return cmd, int(val)
 
@@ -88,6 +100,8 @@ class Tello(Thread):
                 return self.actions[cmd](int(val))
             except (AttributeError, AssertionError) as err:
                 self.logger.error(err)
+                cmd, val = self.match_cmd_with_params(msg_str)
+                return self.actions[cmd](int(val))
                 return Config.ERROR
 
     def _serve(self, conn):
