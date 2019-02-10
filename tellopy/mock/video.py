@@ -1,6 +1,8 @@
 
 from math import pi, sin, cos
 
+from threading import Thread
+
 from direct.showbase.ShowBase import ShowBase
 from direct.actor.Actor import Actor
 from direct.task import Task
@@ -34,7 +36,19 @@ class Video(ShowBase):
         # Loop the panda's animation.
         # self.panda.loop("walk")
         self.acceptOnce("walk", self.panda.loop, ['walk'])
-        self.acceptOnce("escape", exit, [0])
+
+    def stop(self):
+        assert hasattr(self, '_thread'), "Video not started in thread"
+        self._thread.join()
+        self._thread.close()
+
+    @classmethod
+    def run_in_thread(cls):
+        instance = cls()
+        instance._thread = Thread(target=instance.run)
+        instance._thread.deamon = True
+        instance._thread.start()
+        return instance
 
     def walkPanda(self, task):
         """walk panda"""

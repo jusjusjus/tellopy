@@ -28,7 +28,8 @@ class Tello(Thread):
         # these are the actions processed
         self.actions: Dict[str, Callable] = {
             'command': self.init_tello,
-            'streamon': self.streamon
+            'streamon': self.streamon,
+            'streamoff': self.streamoff
         }
 
     def listen(self):
@@ -39,15 +40,18 @@ class Tello(Thread):
                 conn, addr = sock.accept()
                 self.serve(conn, addr)
 
+    def streamoff(self) -> bytes:
+        if not self.stream_is_on:
+            return Config.ERROR
+        self.video.stop()
+        self.stream_is_on = False
+        return Config.OK
+
     def streamon(self) -> bytes:
         if not self.drone_initialized or self.stream_is_on:
             return Config.ERROR
-
-        self.video = Video()
-        self.actions['streamoff'] = lambda: self.video.messanger.send('escape')
-        self.video_thread = Thread(target=self.video.run)
-        self.video_thread.daemon = True
-        self.video_thread.start()
+        self.video = Video.run_in_thread()
+        self.stream_is_on = True
         return Config.OK
 
     def init_tello(self) -> bytes:
