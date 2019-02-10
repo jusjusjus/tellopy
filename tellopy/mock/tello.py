@@ -1,6 +1,6 @@
 
 import re
-import socket
+from socket import socket, AF_INET, SOCK_STREAM
 import logging
 from threading import Thread
 from subprocess import check_output
@@ -8,16 +8,15 @@ from subprocess import check_output
 from typing import Tuple, List, Dict, Any, Callable
 
 # Set the drone to listen to 'loopback'
+from .video import Video
 from ..communications.config import Config
 Config.drone_ip = '127.0.0.1'
 Config.control_port = 8889
 Config.controller_port = 33333
-Config.socket_config = socket.SOCK_STREAM
+Config.socket_config = SOCK_STREAM
 
-class MockTello(Thread):
+class Tello(Thread):
 
-    HOST: str = Config.drone_ip
-    PORT: int = Config.control_port
     cmd_with_params_re = re.compile(r'[a-zA-Z]*. \d')
     logger = logging.getLogger(name="MockTello")
 
@@ -32,16 +31,9 @@ class MockTello(Thread):
             'streamon': self.streamon
         }
 
-    @classmethod
-    def addr(cls) -> Tuple[str, int]:
-        return (cls.HOST, cls.PORT)
-
-    def socket(self):
-        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     def listen(self):
-        with self.socket() as sock:
-            sock.bind(self.addr())
+        with socket(AF_INET, SOCK_STREAM) as sock:
+            sock.bind((Config.drone_ip, Config.control_port))
             sock.listen()
             while True:
                 conn, addr = sock.accept()
@@ -51,14 +43,11 @@ class MockTello(Thread):
         if not self.drone_initialized or self.stream_is_on:
             return Config.ERROR
 
-        def ffmpeg_stream():
-            from .video import Video
-            video = Video()
-            video.run()
-
-        self.video = Thread(target=ffmpeg_stream)
-        self.video.daemon = True
-        self.video.start()
+        self.video = Video()
+        self.actions['streamoff'] = lambda: self.video.messanger.send('escape')
+        self.video_thread = Thread(target=self.video.run)
+        self.video_thread.daemon = True
+        self.video_thread.start()
         return Config.OK
 
     def init_tello(self) -> bytes:

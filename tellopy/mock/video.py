@@ -11,8 +11,7 @@ Task.signal = None
 class Video(ShowBase):
 
     def __init__(self):
-        from direct.task import Task
-        ShowBase.__init__(self)
+        super().__init__(self)
 
         # Load the environment model.
         self.scene = self.loader.loadModel("models/environment")
@@ -49,6 +48,4 @@ class Video(ShowBase):
         angleRadians = angleDegrees * (pi / 180.0)
         self.camera.setPos(20 * sin(angleRadians), -20.0 * cos(angleRadians), 3)
         self.camera.setHpr(angleDegrees, 0, 0)
-        if task.time > 1.0:
-            self.messenger.send('walk')
         return Task.cont

@@ -11,9 +11,9 @@ opt = parser.parse_args()
 if opt.test:
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    from tellopy.mock.tello import MockTello
+    from tellopy import mock
     print("Starting mock server ..")
-    server = MockTello()
+    server = mock.Tello()
     server.start()
 
 from tellopy.speech import HotwordDetector  
