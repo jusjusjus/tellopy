@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument('--test', action='store_true', help='Run speech2sdk in test mode')
-parser.add_argument('--tiny', action='store_true', help='Load tiny object detection model')
+parser.add_argument('--large', action='store_true', help='Load large object-detection model')
 opt = parser.parse_args()
 
 
@@ -29,7 +29,7 @@ import matplotlib.patches as patches
 from time import sleep
 import socket
 
-if opt.tiny:
+if not opt.large:
     Detector.weights_path = "./tellopy/yolo/weights/yolov3-tiny.pt"
     Detector.config_path = "./tellopy/yolo/config/yolov3-tiny.cfg"
 
