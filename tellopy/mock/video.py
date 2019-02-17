@@ -8,7 +8,8 @@ from direct.showbase.ShowBase import ShowBase
 from direct.actor.Actor import Actor
 from direct.interval.IntervalGlobal import Func, Sequence, Wait
 from direct.task import Task
-from panda3d.core import Point3
+import panda3d.core as p3d
+from panda3d.core import Point3, NodePath, Texture, GraphicsPipeSelection
 
 from typing import List
 
@@ -34,6 +35,23 @@ class Video(ShowBase):
         self.angular_velocity = 0.0
 
     def init_scene(self):
+
+        # we now get buffer thats going to hold the texture of our new scene
+        buf = self.win.makeTextureBuffer("hello", *self.win.size)
+        # now we have to setup a new scene graph to make this scene
+        render = NodePath("new render")
+        # this takes care of setting up ther camera properly
+        self.camera = self.makeCamera(buf)
+        self.camera.reparentTo(render)
+        self.camera.setPos(1, 0, 1)
+        self.texture = buf.getTexture()
+        # Panda contains a built-in viewer that lets you view the results of
+        # your render-to-texture operations.  This code configures the viewer.
+        self.bufferViewer.setPosition("llcorner")
+        self.bufferViewer.setCardSize(1.0, 0.0)
+        self.make_offscreen(*self.win.size)
+        self.accept("v", self.bufferViewer.toggleEnable)
+
         # Load the environment model.
         self.scene = self.loader.loadModel("models/environment")
         # Reparent the model to render.
@@ -76,6 +94,80 @@ class Video(ShowBase):
         self.accept("i", self.movement_factory(rotation=-self.rotation_speed).start)
         # exit on escape
         self.acceptOnce("escape", self.stop, [])
+
+        self.taskMgr.add(self.print_cam, "print_cam")
+
+    def make_offscreen(self, sizex, sizey):
+        sizex = p3d.Texture.up_to_power_2(sizex)
+        sizey = p3d.Texture.up_to_power_2(sizey)
+
+        if self.win and self.win.get_size()[0] == sizex and self.win.get_size()[1] == sizey:
+            # The current window is good, don't waste time making a new one
+            return
+
+        use_frame_rate_meter = self.frameRateMeter is not None
+        self.setFrameRateMeter(False)
+
+        self.graphicsEngine.remove_all_windows()
+        self.win = None
+        self.view_region = None
+
+        # First try to create a 24bit buffer to minimize copy times
+        fbprops = p3d.FrameBufferProperties()
+        fbprops.set_rgba_bits(8, 8, 8, 0)
+        fbprops.set_depth_bits(24)
+        winprops = p3d.WindowProperties.size(sizex, sizey)
+        flags = p3d.GraphicsPipe.BF_refuse_window
+        #flags = p3d.GraphicsPipe.BF_require_window
+        self.win = self.graphicsEngine.make_output(
+            self.pipe,
+            'window',
+            0,
+            fbprops,
+            winprops,
+            flags
+        )
+
+        if self.win is None:
+            # Try again with an alpha channel this time (32bit buffer)
+            fbprops.set_rgba_bits(8, 8, 8, 8)
+            self.win = self.graphicsEngine.make_output(
+                self.pipe,
+                'window',
+                0,
+                fbprops,
+                winprops,
+                flags
+            )
+
+        if self.win is None:
+            print('Unable to open window')
+            sys.exit(-1)
+
+        disp_region = self.win.make_mono_display_region()
+        disp_region.set_camera(self.cam)
+        disp_region.set_active(True)
+        disp_region.set_clear_color_active(True)
+        disp_region.set_clear_depth(1.0)
+        disp_region.set_clear_depth_active(True)
+        self.view_region = disp_region
+        self.graphicsEngine.open_windows()
+
+        # self.texture = p3d.Texture()
+        self.win.addRenderTexture(self.texture, p3d.GraphicsOutput.RTM_copy_ram)
+
+    def print_cam(self, task):
+        # data = bytes(memoryview(self.texture.get_ram_image_as('BGR')))
+        try:
+            print(self.texture.uncompressRamImage())
+            if self.texture.has_ram_image():
+                nx = self.texture.get_x_size()
+                ny = self.texture.get_y_size()
+                data = bytes(memoryview(self.texture.get_ram_image_as('BGR')))
+                print(nx, ny, data)
+        except AssertionError as err:
+            print(err)
+        return task.cont
 
     def stop(self):
         if hasattr(self, '_thread'):
