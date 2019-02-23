@@ -52,19 +52,19 @@ class Tello(Thread):
             return Config.ERROR
         self.video = Video.run_in_thread()
         self.stream_is_on = True
-        for cmd in ('flyback', 'forward', 'cw', 'ccw'):
+        for cmd in ('flyback', 'forward', 'back', 'up', 'down', 'cw', 'ccw'):
             self.actions[cmd] = self.movement_control_factory(cmd)
         return Config.OK
 
     def movement_control_factory(self, cmd: str):
-        def fn(x):
+        def send_movement_command(x):
             try:
                 self.video.messenger.send(cmd)
                 return Config.OK
             except AttributeError as err:
                 print(str(err))
                 return Config.ERROR
-        return fn
+        return send_movement_command
 
     def init_tello(self) -> bytes:
         """initializes tello, returns `Config.ERROR` if already initialized"""

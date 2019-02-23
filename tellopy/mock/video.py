@@ -1,4 +1,5 @@
 
+from time import sleep
 from typing import List
 
 import numpy as np
@@ -32,8 +33,8 @@ class Video(ShowBase):
     show_scene: bool = False
     window_size = (800, 600)
 
-    def __init__(self):
-        super().__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
         self.init_scene()
         self.init_physics()
 
@@ -85,6 +86,8 @@ class Video(ShowBase):
         # Tello input settings
         self.accept("back", self.movement_factory(velocity=[0.0, -self.displacement_speed, 0.0]).start)
         self.accept("forward", self.movement_factory(velocity=[0.0, self.displacement_speed, 0.0]).start)
+        self.accept("up", self.movement_factory(velocity=[0.0, 0.0, self.displacement_speed]).start)
+        self.accept("down", self.movement_factory(velocity=[0.0, 0.0, -self.displacement_speed]).start)
         self.accept("ccw", self.movement_factory(rotation=self.rotation_speed).start)
         self.accept("cw", self.movement_factory(rotation=-self.rotation_speed).start)
         # keyboard control (h,j,k,l,u,i)
@@ -148,10 +151,11 @@ class Video(ShowBase):
     def print_cam(self, task):
         try:
             if self.texture.has_ram_image():
-                nx = self.texture.get_x_size()
-                ny = self.texture.get_y_size()
-                data = bytes(memoryview(self.texture.get_ram_image_as('BGR')))
-                print(nx, ny, data[1000:1010])
+                byts = bytes(memoryview(self.texture.get_ram_image_as('RGB')))
+                frame = np.frombuffer(byts, dtype='u1')
+                frame.shape = (
+                    self.texture.get_x_size(), self.texture.get_y_size(), 3)
+                self.frame = frame[::-1, ...]
         except AssertionError as err:
             print(err)
         return task.cont
@@ -165,11 +169,13 @@ class Video(ShowBase):
             exit(0)
 
     @classmethod
-    def run_in_thread(cls):
-        instance = cls()
+    def run_in_thread(cls, offscreen=False, wait_for_frame=False):
+        instance = cls(windowType='offscreen') if offscreen else cls()
         instance._thread = Thread(target=instance.run)
         instance._thread.deamon = True
         instance._thread.start()
+        while not hasattr(instance, 'frame') and wait_for_frame:
+            sleep(0.1)
         return instance
 
     def movement_factory(self, velocity: List[float]=None, rotation: float=0.0):
