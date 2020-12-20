@@ -4,5 +4,6 @@ test:
 	pytest
 
 install:
+	conda install -y -c anaconda pyaudio
 	pip install -r requirements.txt
-	conda install -c conda-forge av
+	conda install -y -c conda-forge av
