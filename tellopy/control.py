@@ -68,9 +68,7 @@ class UDPSocket(socket.socket):
     name = ''
     _listen = False
 
-    def __init__(self, ip, port, name='', listen=True):
-        assert isinstance(ip, str) and isinstance(port, int) \
-            and isinstance(name, str) and isinstance(listen, bool)
+    def __init__(self, ip: str, port: int, name: str = '', listen: bool = True):
         self.name = name
         super().__init__(socket.AF_INET, socket.SOCK_DGRAM)
         self.addr = (ip, port)
@@ -127,7 +125,7 @@ class UDPSocket(socket.socket):
 class CommandControl:
 
     logger = logging.getLogger(name='CommandControl')
-    _local_ip = '192.168.10.2'
+    _local_ip = '192.168.10.3'
     _cmd_port = 8889
     _tello_ip = '192.168.10.1'
     _tello_addr = ('192.168.10.1', 8889)
