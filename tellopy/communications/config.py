@@ -1,6 +1,7 @@
 
 import socket
 
+
 class Config:
     # '192.168.10.1' for drone operation
     # '127.0.0.1' for testing

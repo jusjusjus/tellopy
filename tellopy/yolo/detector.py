@@ -13,6 +13,7 @@ from typing import List
 
 Detection = namedtuple('Detection', 'x1 y1 x2 y2 conf cls_conf cls_pred')
 
+
 class Detector:
 
     weights_path: str = join(dirname(__file__), 'weights', 'yolov3.pt')
@@ -32,7 +33,7 @@ class Detector:
             checkpoint = torch.load(self.weights_path, map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
             del checkpoint
-        else: # darknet format
+        else:  # darknet format
             load_weights(self.model, self.weights_path)
 
     @property
@@ -53,7 +54,8 @@ class Detector:
 
     def raw_call(self, *args, **kwargs):
         detections = self.model(*args, **kwargs)
-        detections = non_max_suppression(detections, self.conf_thres, self.nms_thres)
+        detections = non_max_suppression(
+            detections, self.conf_thres, self.nms_thres)
         return detections
 
     def __call__(self, *args, **kwargs):
@@ -69,11 +71,13 @@ class Detector:
         # Upper (left) and lower (right) padding
         pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
         # Determine padding
-        pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
+        pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else (
+            (0, 0), (pad1, pad2), (0, 0))
         # Add padding
         input_img = np.pad(img, pad, 'constant', constant_values=127.5) / 255.
         # Resize and normalize
-        input_img = resize(input_img, (self.img_size, self.img_size, 3), mode='reflect')
+        input_img = resize(
+            input_img, (self.img_size, self.img_size, 3), mode='reflect')
         # Channels-first
         input_img = np.transpose(input_img, (2, 0, 1))
         # As pytorch tensor

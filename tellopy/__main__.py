@@ -1,7 +1,6 @@
-
 import logging
 from terminaltables import AsciiTable
-from PyQt5.QtCore import QDateTime, Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QDialog, QGridLayout, QPushButton
 
 
@@ -22,27 +21,27 @@ class Keyboard:
     def register(self, key, method):
         key = 'Key_'+key.upper()
         key = Qt.__dict__[key] if isinstance(key, str) else key
-        assert key not in self.registry, "key %s already in %s"%(key, self.registry.keys())
+        assert key not in self.registry, "key %s already in %s" % (
+            key, self.registry.keys())
         self.registry[key] = method
 
     def keyPressEvent(self, key):
         try:
             self.registry[key]()
-        except:
-            self.logger.info("Key %s not found [%s]"%(key, self.registry.keys()))
+        except Exception:
+            self.logger.info("Key %s not found [%s]" % (
+                key, self.registry.keys()))
 
     def registry_table(self):
         T = [['Key', 'Function']]
         for key, method in self.registry.items():
             T.append([_inv_key_map.get(key, key)[4:].lower(), method.__name__])
         return AsciiTable(T).table
-    
+
     def __str__(self):
         s = "\nKeyboard shortcuts:\n"
-        s+= self.registry_table()
+        s += self.registry_table()
         return s
-
-
 
 
 class ButtonControl(QDialog):
@@ -145,6 +144,7 @@ class ButtonControl(QDialog):
     def show(self):
         super().show()
 
+
 if __name__ == "__main__":
 
     from .mock import Mock
@@ -152,10 +152,9 @@ if __name__ == "__main__":
 
     try:
         control = CommandControl()
-    except:
+    except Exception:
         print("Drone not enabled.")
         control = Mock()
-
 
     app = QApplication([])
     buttons = ButtonControl(control)

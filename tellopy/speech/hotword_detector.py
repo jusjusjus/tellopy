@@ -15,17 +15,11 @@
 #
 
 from os.path import join, dirname, basename
-import sys
 from glob import glob
 import struct
-import argparse
-import platform
 from threading import Thread
-from datetime import datetime
 
 import pyaudio
-import soundfile
-import numpy as np
 
 from .porcupine import Porcupine
 
@@ -43,11 +37,13 @@ class HotwordDetector(Thread):
         """
         Constructor.
 
-        :param sensitivities: Sensitivity parameter for each wake word. For more information refer to
-        'include/pv_porcupine.h'. It uses the
-        same sensitivity value for all keywords.
-        :param input_device_index: Optional argument. If provided, audio is recorded from this input device. Otherwise,
-        the default audio input device is used.
+        Parameters
+        ----------
+        - sensitivities: Sensitivity parameter for each wake word. For more
+          information refer to 'include/pv_porcupine.h'. It uses the same
+          sensitivity value for all keywords.
+        - input_device_index: If provided, audio is recorded from this input
+          device. Otherwise, the default audio input device is used.
         """
         super().__init__()
         self.deamon = True
@@ -71,8 +67,8 @@ class HotwordDetector(Thread):
         ]
 
         print('listening for:')
-        for keyword_name, sensitivity in zip(keyword_names, self.sensitivities):
-            print('- %s (sensitivity: %f)' % (keyword_name, sensitivity))
+        for kw_name, sensitivity in zip(keyword_names, self.sensitivities):
+            print('- %s (sensitivity: %f)' % (kw_name, sensitivity))
 
         pa = None
         porcupine = None
@@ -111,16 +107,19 @@ class HotwordDetector(Thread):
             if pa is not None:
                 pa.terminate()
 
-    _AUDIO_DEVICE_INFO_KEYS = ['index', 'name', 'defaultSampleRate', 'maxInputChannels']
+    _AUDIO_DEVICE_INFO_KEYS = ['index', 'name',
+                               'defaultSampleRate', 'maxInputChannels']
 
     @classmethod
     def show_audio_devices_info(cls):
-        """ Provides information regarding different audio devices available. """
+        """ Provides info regarding different audio devices available"""
         pa = pyaudio.PyAudio()
         for i in range(pa.get_device_count()):
             info = pa.get_device_info_by_index(i)
-            print(', '.join("'%s': '%s'" % (k, str(info[k])) for k in cls._AUDIO_DEVICE_INFO_KEYS))
+            print(', '.join("'%s': '%s'" % (
+                k, str(info[k])) for k in cls._AUDIO_DEVICE_INFO_KEYS))
         pa.terminate()
+
 
 def _default_library_path():
     return join(dirname(__file__), 'libpv_porcupine.so')

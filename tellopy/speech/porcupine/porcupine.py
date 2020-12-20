@@ -1,3 +1,4 @@
+# flake8: noqa
 #
 # Copyright 2018 Picovoice Inc.
 #
@@ -39,8 +40,10 @@ class Porcupine(object):
     class CPorcupine(Structure):
         pass
 
-    _library_path = os.path.join(os.path.dirname(__file__), 'libpv_porcupine.so')
-    _model_file_path = os.path.join(os.path.dirname(__file__), 'porcupine_params.pv')
+    _library_path = os.path.join(
+        os.path.dirname(__file__), 'libpv_porcupine.so')
+    _model_file_path = os.path.join(
+        os.path.dirname(__file__), 'porcupine_params.pv')
 
     def __init__(
             self,
@@ -63,16 +66,19 @@ class Porcupine(object):
         """
 
         if not os.path.exists(self._library_path):
-            raise IOError("Could not find Porcupine's library at '%s'" % self._library_path)
+            raise IOError("Could not find Porcupine's library at '%s'" %
+                          self._library_path)
 
         library = cdll.LoadLibrary(self._library_path)
 
         if not os.path.exists(self._model_file_path):
-            raise IOError("Could not find model file at '%s'" % self._model_file_path)
+            raise IOError("Could not find model file at '%s'" %
+                          self._model_file_path)
 
         if sensitivity is not None and keyword_file_path is not None:
             if not os.path.exists(keyword_file_path):
-                raise IOError("Could not find keyword file at '%s'" % keyword_file_path)
+                raise IOError("Could not find keyword file at '%s'" %
+                              keyword_file_path)
             keyword_file_paths = [keyword_file_path]
 
             if not (0 <= sensitivity <= 1):
@@ -80,7 +86,8 @@ class Porcupine(object):
             sensitivities = [sensitivity]
         elif sensitivities is not None and keyword_file_paths is not None:
             if len(keyword_file_paths) != len(sensitivities):
-                raise ValueError("Different number of sensitivity and keyword file path parameters are provided.")
+                raise ValueError(
+                    "Different number of sensitivity and keyword file path parameters are provided.")
 
             for x in keyword_file_paths:
                 if not os.path.exists(os.path.expanduser(x)):
@@ -108,14 +115,17 @@ class Porcupine(object):
         status = init_func(
             self._model_file_path.encode(),
             self._num_keywords,
-            (c_char_p * self._num_keywords)(*[os.path.expanduser(x).encode() for x in keyword_file_paths]),
+            (c_char_p * self._num_keywords)(*
+                                            [os.path.expanduser(x).encode() for x in keyword_file_paths]),
             (c_float * self._num_keywords)(*sensitivities),
             byref(self._handle))
         if status is not self.PicovoiceStatuses.SUCCESS:
-            raise self._PICOVOICE_STATUS_TO_EXCEPTION[status]('Initialization failed')
+            raise self._PICOVOICE_STATUS_TO_EXCEPTION[status](
+                'Initialization failed')
 
         self.process_func = library.pv_porcupine_multiple_keywords_process
-        self.process_func.argtypes = [POINTER(self.CPorcupine), POINTER(c_short), POINTER(c_int)]
+        self.process_func.argtypes = [
+            POINTER(self.CPorcupine), POINTER(c_short), POINTER(c_int)]
         self.process_func.restype = self.PicovoiceStatuses
 
         self._delete_func = library.pv_porcupine_delete
@@ -150,9 +160,11 @@ class Porcupine(object):
         """
 
         result = c_int()
-        status = self.process_func(self._handle, (c_short * len(pcm))(*pcm), byref(result))
+        status = self.process_func(
+            self._handle, (c_short * len(pcm))(*pcm), byref(result))
         if status is not self.PicovoiceStatuses.SUCCESS:
-            raise self._PICOVOICE_STATUS_TO_EXCEPTION[status]('Processing failed')
+            raise self._PICOVOICE_STATUS_TO_EXCEPTION[status](
+                'Processing failed')
 
         keyword_index = result.value
 

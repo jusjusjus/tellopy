@@ -1,7 +1,4 @@
-
-import pickle
 import socket
-import numpy as np
 from .pickle_protocol import PickleProtocol
 
 

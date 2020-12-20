@@ -1,3 +1,4 @@
+# flake8: noqa
 import os
 import onnx
 from onnx import onnx_pb
@@ -11,7 +12,8 @@ import glob
 
 def main():
     os.system('rm -rf saved_models && mkdir saved_models')
-    files = glob.glob('saved_models/*.onnx') + glob.glob('../yolov3/weights/*.onnx')
+    files = glob.glob('saved_models/*.onnx') + \
+        glob.glob('../yolov3/weights/*.onnx')
 
     for f in files:
         # 1. ONNX to CoreML
@@ -29,7 +31,8 @@ def main():
         model_file = open(f, 'rb')
         model_proto = onnx_pb.ModelProto()
         model_proto.ParseFromString(model_file.read())
-        yolov3_model = convert(model_proto, image_input_names=['0'], preprocessing_args={'image_scale': 1. / 255})
+        yolov3_model = convert(model_proto, image_input_names=[
+                               '0'], preprocessing_args={'image_scale': 1. / 255})
 
         # 2. Reduce model to FP16, change outputs to DOUBLE and save
         import coremltools
@@ -37,9 +40,11 @@ def main():
         spec = yolov3_model.get_spec()
         for i in range(2):
             spec.description.output[i].type.multiArrayType.dataType = \
-                coremltools.proto.FeatureTypes_pb2.ArrayFeatureType.ArrayDataType.Value('DOUBLE')
+                coremltools.proto.FeatureTypes_pb2.ArrayFeatureType.ArrayDataType.Value(
+                    'DOUBLE')
 
-        spec = coremltools.utils.convert_neural_network_spec_weights_to_fp16(spec)
+        spec = coremltools.utils.convert_neural_network_spec_weights_to_fp16(
+            spec)
         yolov3_model = coremltools.models.MLModel(spec)
 
         name_out0 = spec.description.output[0].name
@@ -47,11 +52,14 @@ def main():
 
         num_classes = 80
         num_anchors = 507  # 507 for yolov3-tiny,
-        spec.description.output[0].type.multiArrayType.shape.append(num_anchors)
-        spec.description.output[0].type.multiArrayType.shape.append(num_classes)
+        spec.description.output[0].type.multiArrayType.shape.append(
+            num_anchors)
+        spec.description.output[0].type.multiArrayType.shape.append(
+            num_classes)
         # spec.description.output[0].type.multiArrayType.shape.append(1)
 
-        spec.description.output[1].type.multiArrayType.shape.append(num_anchors)
+        spec.description.output[1].type.multiArrayType.shape.append(
+            num_anchors)
         spec.description.output[1].type.multiArrayType.shape.append(4)
         # spec.description.output[1].type.multiArrayType.shape.append(1)
 
@@ -87,7 +95,8 @@ def main():
         nms_spec.specificationVersion = 3
 
         for i in range(2):
-            decoder_output = yolov3_model._spec.description.output[i].SerializeToString()
+            decoder_output = yolov3_model._spec.description.output[i].SerializeToString(
+            )
 
             nms_spec.description.input.add()
             nms_spec.description.input[i].ParseFromString(decoder_output)
@@ -121,7 +130,8 @@ def main():
         nms.confidenceThreshold = 0.5
         nms.pickTop.perClass = True
 
-        labels = np.loadtxt('../yolov3/data/coco.names', dtype=str, delimiter='\n')
+        labels = np.loadtxt('../yolov3/data/coco.names',
+                            dtype=str, delimiter='\n')
         nms.stringClassLabels.vector.extend(labels)
 
         nms_model = coremltools.models.MLModel(nms_spec)
@@ -170,7 +180,8 @@ def main():
 
         # Add 3rd dimension of size 1 (apparently not needed, produces error on compile)
         yolov3_output = yolov3_model._spec.description.output
-        yolov3_output[0].type.multiArrayType.shape[:] = [num_anchors, num_classes, 1]
+        yolov3_output[0].type.multiArrayType.shape[:] = [
+            num_anchors, num_classes, 1]
         yolov3_output[1].type.multiArrayType.shape[:] = [num_anchors, 4, 1]
 
         nms_input = nms_model._spec.description.input
@@ -183,9 +194,12 @@ def main():
         pipeline.add_model(nms_model)
 
         # Correct datatypes
-        pipeline.spec.description.input[0].ParseFromString(yolov3_model._spec.description.input[0].SerializeToString())
-        pipeline.spec.description.output[0].ParseFromString(nms_model._spec.description.output[0].SerializeToString())
-        pipeline.spec.description.output[1].ParseFromString(nms_model._spec.description.output[1].SerializeToString())
+        pipeline.spec.description.input[0].ParseFromString(
+            yolov3_model._spec.description.input[0].SerializeToString())
+        pipeline.spec.description.output[0].ParseFromString(
+            nms_model._spec.description.output[0].SerializeToString())
+        pipeline.spec.description.output[1].ParseFromString(
+            nms_model._spec.description.output[1].SerializeToString())
 
         # Update metadata
         pipeline.spec.description.metadata.versionString = 'yolov3-tiny.pt imported from PyTorch'
@@ -196,7 +210,8 @@ def main():
         user_defined_metadata = {'classes': ','.join(labels),
                                  'iou_threshold': str(nms.iouThreshold),
                                  'confidence_threshold': str(nms.confidenceThreshold)}
-        pipeline.spec.description.metadata.userDefined.update(user_defined_metadata)
+        pipeline.spec.description.metadata.userDefined.update(
+            user_defined_metadata)
 
         # Save the model
         pipeline.spec.specificationVersion = 3

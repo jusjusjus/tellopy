@@ -1,2 +1,1 @@
-
-from . import yolo
+from . import yolo  # noqa: F401

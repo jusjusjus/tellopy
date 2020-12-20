@@ -3,7 +3,7 @@ import socket
 from threading import Thread
 
 from .config import Config
-from .abort_timer import AbortTimer
+
 
 class Control:
 
@@ -39,9 +39,10 @@ class Control:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.connect(dummy_host)
             ip = sock.getsockname()[0]
-        assert ip.startswith(Config.drone_ip[:10]), "Please connect to the tello (current ip: %s)"%ip
+        assert ip.startswith(
+            Config.drone_ip[:10]), f"Please connect to the tello (ip: {ip})"
         return ip
-       
+
     def init(self):
         addr = (self.get_my_own_ip(), Config.controller_port)
         print('bind', addr, 'and connect to', self.drone_addr)
@@ -49,7 +50,7 @@ class Control:
             self.sock.bind(addr)
             self.sock.connect(self.drone_addr)
         except OSError as e:
-            msg = "while binding %s:%s, "%addr + str(e)
+            msg = "while binding %s:%s, " % addr + str(e)
             raise OSError(msg)
         response = self.send(b'command')
         self.initialized = response == Config.OK
@@ -63,7 +64,7 @@ class Control:
                     self._response, ip = self.sock.recvfrom(128)
                     break
                 except Exception as e:
-                    print("recv_thread Exception '%s', exiting.."%e)
+                    print("recv_thread Exception '%s', exiting.." % e)
                     self._response = Config.ERROR
                     break
 
@@ -77,11 +78,12 @@ class Control:
 
     def check_command(self, cmd: bytes):
         assert self.initialized or cmd == b'command'
-        assert cmd in self.valid_commands, "%s not in %s"%(cmd, self.valid_commands)
+        assert cmd in self.valid_commands, "%s not in %s" % (
+            cmd, self.valid_commands)
 
     def send(self, cmd: bytes):
         self.check_command(cmd)
         self.sock.sendall(cmd)
         response = self.wait_for_response()
-        print(self.drone_addr, "upon '%s':"%cmd, response)
+        print(self.drone_addr, "upon '%s':" % cmd, response)
         return response
