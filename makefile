@@ -14,7 +14,6 @@ test:
 
 init.conda:
 	conda create -y -n tello python=3.6
-	conda activate tello
 
 install:
 	conda install -y -c anaconda pyaudio
