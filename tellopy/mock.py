@@ -1,16 +1,16 @@
-
 import time
 import logging
 import threading
-import traceback
 
 _OK = 'ok'
 _ERROR = 'error'
 
+
 class Socket:
 
     def sendto(self, msg, addr):
-        print("Sending %s to %s"%(msg, addr))
+        print("Sending %s to %s" % (msg, addr))
+
 
 class UDPSocket(Socket):
 
@@ -32,19 +32,16 @@ class UDPSocket(Socket):
     def bind(self):
         print("super().bind(self.addr)")
 
-    def send(ip, port, command):
-        print("Sending '%s' to %s:%s"(command, ip, port))
-        return True
-
     def recvfrom(self, num_bytes):
         time.sleep(1.0)
-        return num_bytes, ('0.0.0.0', 8888) 
+        return num_bytes, ('0.0.0.0', 8888)
 
     def _receive_thread(self):
         while True:
             try:
                 self.response, ip = self.recvfrom(256)
-                self.logger.info('Received msg %s from %s'%(self.response, ip))
+                self.logger.info('Received msg %s from %s' %
+                                 (self.response, ip))
             except Exception:
                 break
 
@@ -57,18 +54,20 @@ class UDPSocket(Socket):
         try:
             while self.response is None:
                 if self.abort_flag is True:
-                    raise RuntimeError('No response to command [%s, %s]'%(self.response, self.abort_flag))
+                    raise RuntimeError('No response to command [%s, %s]' % (
+                        self.response, self.abort_flag))
             timer.cancel()
             response = self.response.decode('utf-8')
-        except:
+        except Exception:
             self.logger.error("No response received!")
             timer.cancel()
             response = _OK
+
         self.response = None
         return response
 
     def send(self, addr, msg):
-        self.logger.info("Sending '%s' to %s from %s"%(msg, addr, self.addr))
+        self.logger.info("Sending '%s' to %s from %s" % (msg, addr, self.addr))
         self.abort_flag = False
         self.sendto(msg.encode('utf-8'), addr)
         return self.wait_for_response()
@@ -84,10 +83,11 @@ class Mock:
         self.abort_flag = False
         self.response = None
         self.port8889 = UDPSocket(self._local_ip, 8889)
-        
+
         msg = self.send_command('command')
         if msg != _OK:
-            raise RuntimeError('Received %s.  Tello rejected attempt to enter command mode'%msg)
+            raise RuntimeError(f"Received {msg}. "
+                               "Tello rejected attempt to enter command mode")
 
     def send_command(self, command):
         return self.port8889.send(self._tello_addr, command)
@@ -99,16 +99,15 @@ class Mock:
         battery = self.send_command('battery?')
         try:
             battery = int(battery)
-        except:
+        except Exception:
             pass
         return battery
-
 
     def get_flight_time(self):
         flight_time = self.send_command('time?')
         try:
             flight_time = int(flight_time)
-        except:
+        except Exception:
             pass
         return flight_time
 
@@ -116,7 +115,7 @@ class Mock:
         speed = self.send_command('speed?')
         try:
             speed = round((float(speed) / 27.7778), 1)
-        except:
+        except Exception:
             pass
 
         return speed

@@ -5,11 +5,13 @@ from time import sleep
 from threading import Thread
 from .abort_timer import AbortTimer
 
+
 def tensor_to_image(t):
     img = t.numpy()
     img = img.transpose(1, 2, 0)
     img = img * 255
     return img.astype(np.uint8)
+
 
 class Video:
 
@@ -68,5 +70,3 @@ class Video:
     @property
     def running(self):
         return hasattr(self, 'thread')
-
-

@@ -1,2 +1,1 @@
-
-from .hotword_detector import HotwordDetector
+from .hotword_detector import HotwordDetector  # noqa: F401

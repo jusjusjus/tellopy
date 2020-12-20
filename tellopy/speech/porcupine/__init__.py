@@ -1,2 +1,1 @@
-
-from .porcupine import Porcupine
+from .porcupine import Porcupine  # noqa: F401

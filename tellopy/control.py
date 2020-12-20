@@ -1,5 +1,3 @@
-
-import time
 import socket
 import logging
 import threading
@@ -40,13 +38,13 @@ class Receiver(threading.Thread):
         self._response = None
 
     def _receive(self):
-        self.info("start listening to (%s, %s)"%self.addr)
+        self.info("start listening to (%s, %s)" % self.addr)
         while True:
             try:
                 self.response, ip = self.recvfrom(256)
-                self.info('recv msg %s from %s'%(self.response, ip))
+                self.info('recv msg %s from %s' % (self.response, ip))
             except Exception as e:
-                self.error("recv_thread Exception %s, exiting.."%e)
+                self.error("recv_thread Exception %s, exiting.." % e)
                 break
 
     def info(self, *args, **kwargs):
@@ -72,7 +70,7 @@ class UDPSocket(socket.socket):
 
     def __init__(self, ip, port, name='', listen=True):
         assert isinstance(ip, str) and isinstance(port, int) \
-                and isinstance(name, str) and isinstance(listen, bool)
+            and isinstance(name, str) and isinstance(listen, bool)
         self.name = name
         super().__init__(socket.AF_INET, socket.SOCK_DGRAM)
         self.addr = (ip, port)
@@ -84,9 +82,9 @@ class UDPSocket(socket.socket):
         return self._listen
 
     @listen.setter
-    def listen(self, l):
-        self._listen = l
-        self.receiver = Receiver(self) if l else None
+    def listen(self, listen):
+        self._listen = listen
+        self.receiver = Receiver(self) if listen else None
 
     def __del__(self):
         self.close()
@@ -95,7 +93,7 @@ class UDPSocket(socket.socket):
         try:
             super().bind(self.addr)
         except OSError as e:
-            msg = "while binding %s, "%str(self.addr) + str(e)
+            msg = "while binding %s, " % str(self.addr) + str(e)
             raise OSError(msg)
 
     def info(self, msg):
@@ -111,7 +109,7 @@ class UDPSocket(socket.socket):
                 if timer.abort:
                     raise RuntimeError('no response received!')
             response = self.receiver.response
-            assert response in (_OK, _ERROR), "unknown response %s"%response
+            assert response in (_OK, _ERROR), "unknown response %s" % response
         except RuntimeError as e:
             self.error(str(e))
             response = _ERROR
@@ -120,7 +118,7 @@ class UDPSocket(socket.socket):
         return response
 
     def send(self, addr, msg):
-        self.info("send msg %s to %s from %s"%(msg, addr, self.addr))
+        self.info("send msg %s to %s from %s" % (msg, addr, self.addr))
         msg = msg if isinstance(msg, bytes) else msg.encode('utf-8')
         self.sendto(msg, addr)
         return self._wait_for_response() if self.listen else _OK
@@ -135,17 +133,19 @@ class CommandControl:
     _tello_addr = ('192.168.10.1', 8889)
 
     def __init__(self):
-        self.cmd_sock = UDPSocket(self._local_ip, self._cmd_port, name='cmd', listen=True)
+        self.cmd_sock = UDPSocket(
+            self._local_ip, self._cmd_port, name='cmd', listen=True)
         msg = self.send_command('command', assert_ok=True)
         if msg != _OK:
-            raise RuntimeError('Received %s.  Tello rejected attempt to enter command mode'%msg)
+            raise RuntimeError(f"Received {msg}. "
+                               "Tello rejected attempt to enter command mode")
 
     def send_command(self, command, assert_ok=False):
         try:
             msg = self.cmd_sock.send(self._tello_addr, command)
         except Exception as e:
             msg = str(e)
-        info = "sent %s, recv'd %s"%(command, msg)
+        info = "sent %s, recv'd %s" % (command, msg)
         if assert_ok and msg == _ERROR:
             raise RuntimeError(info)
         else:

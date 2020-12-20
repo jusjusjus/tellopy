@@ -2,6 +2,7 @@
 import pickle
 import numpy as np
 
+
 class PickleProtocol:
 
     def __init__(self, conn):

@@ -1,11 +1,10 @@
+#!/usr/bin/env python
 
-import argparse
-from threading import Thread
-
-from tellopy.speech import HotwordDetector  
+from tellopy.speech import HotwordDetector
 from tellopy.communications.control import Control
 from tellopy.communications.video import Video
 from tellopy.communications.config import Config
+
 
 class Speech2sdk:
 
@@ -32,14 +31,15 @@ class Speech2sdk:
         self.control = None if test else Control().init()
 
     def init_video(self):
-        self.video = Video("udp://%s:%s"%(Config.drone_ip, Config.video_port))
+        self.video = Video("udp://%s:%s" %
+                           (Config.drone_ip, Config.video_port))
         self.video.start(timeout=600.0, blocking=False)
 
     def send_command(self, txt):
         txt = txt.lower().replace(' ', '')
         txt = self.cmd_map.get(txt, txt)
         byts = txt.encode('utf-8')
-        self.actions.get(byts, lambda:None)()
+        self.actions.get(byts, lambda: None)()
         if self.control is None:
             return b'ok'
         else:
