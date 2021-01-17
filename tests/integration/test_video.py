@@ -1,5 +1,5 @@
 import numpy as np
-from .video import Video
+from tellopy.device.video import Video
 
 
 def test_video():

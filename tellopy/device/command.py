@@ -49,3 +49,20 @@ class Command:
         instance = cls(string)
         instance.validate()
         return instance
+
+# add the standard commands
+for command in Command.level_1_commands:
+    setattr(Command, command, Command.from_string(command))
+
+def level_2_command_fn(command):
+    @classmethod
+    def fn(cls, value):
+        return cls.from_string(f"{command} {value}")
+
+    return fn
+
+for command in Command.level_2_commands:
+    setattr(Command, command, level_2_command_fn(command))
+
+for command in Command.level_3_commands:
+    setattr(Command, command, level_2_command_fn(command))
