@@ -17,6 +17,7 @@ class Command:
     level_3_commands = [
         'flip',
     ]
+
     def __init__(self, command: str):
         self.command = command
 
@@ -26,7 +27,7 @@ class Command:
     def validate(self):
         try:
             self._validate()
-        except AssertionError as err:
+        except AssertionError:
             raise ValueError(f"invalid command '{self.command}'")
 
     def _validate(self):
@@ -50,9 +51,11 @@ class Command:
         instance.validate()
         return instance
 
+
 # add the standard commands
 for command in Command.level_1_commands:
     setattr(Command, command, Command.from_string(command))
+
 
 def level_2_command_fn(command):
     @classmethod
@@ -60,6 +63,7 @@ def level_2_command_fn(command):
         return cls.from_string(f"{command} {value}")
 
     return fn
+
 
 for command in Command.level_2_commands:
     setattr(Command, command, level_2_command_fn(command))

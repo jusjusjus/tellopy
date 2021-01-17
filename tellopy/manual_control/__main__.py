@@ -147,7 +147,6 @@ class ButtonControl(QDialog):
 
 if __name__ == "__main__":
 
-    from ..mock import Mock
     from ..device import Device
 
     device = Device.init()
