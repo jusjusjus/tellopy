@@ -1,6 +1,5 @@
-
 import re
-import socket
+from socket import socket
 from threading import Thread
 from subprocess import check_output
 
@@ -27,15 +26,15 @@ class TelloProtocol:
 
 class MockTello(Thread):
 
-    HOST: str = Config.drone_ip
-    PORT: int = Config.control_port
+    HOST = Config.drone_ip
+    PORT = Config.control_port
     cmd_with_params_re = re.compile(r'[a-zA-Z]*. \d')
 
     def __init__(self):
         super().__init__(target=self.listen)
         self.deamon = True
-        self.drone_initialized: bool = False
-        self.stream_is_on: bool = False
+        self.drone_initialized = False
+        self.stream_is_on = False
         # these are the actions processed
         self.actions: Dict[str, Callable] = {
             'command': self.init_tello,
@@ -46,11 +45,8 @@ class MockTello(Thread):
     def addr(cls) -> Tuple[str, int]:
         return (cls.HOST, cls.PORT)
 
-    def socket(self):
-        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     def listen(self):
-        with self.socket() as sock:
+        with socket(AF_INET, SOCK_STREAM) as sock:
             sock.bind(self.addr())
             sock.listen()
             while True:
@@ -90,7 +86,7 @@ class MockTello(Thread):
         assert matches is not None
         match = matches.group()
         assert len(match) == len(msg)
-        cmd, val = match.split(' ')
+        cmd, val = match.split()
         return cmd, int(val)
 
     def process(self, msg: bytes) -> bytes:
