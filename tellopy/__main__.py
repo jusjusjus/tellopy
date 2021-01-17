@@ -49,10 +49,10 @@ class ButtonControl(QDialog):
     _move_distance = 1
     _rotate_angle = 30
 
-    def __init__(self, control, *args, **kwargs):
+    def __init__(self, device, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.keyboard = Keyboard()
-        self.device = control
+        self.device = device
         button_grid = self.create_button_grid()
         self.setLayout(button_grid)
 
@@ -148,16 +148,12 @@ class ButtonControl(QDialog):
 if __name__ == "__main__":
 
     from .mock import Mock
-    from .control import CommandControl
+    from .device import Device
 
-    try:
-        control = CommandControl()
-    except Exception:
-        print("Drone not enabled.")
-        control = Mock()
+    device = Device.init()
 
     app = QApplication([])
-    buttons = ButtonControl(control)
+    buttons = ButtonControl(device)
     buttons.show()
     print(buttons.keyboard)
     app.exec_()

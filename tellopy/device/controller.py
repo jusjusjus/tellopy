@@ -3,9 +3,10 @@ import socket
 from threading import Thread
 
 from .config import Config
+from .command import Command
 
 
-class Control:
+class Controller:
 
     valid_commands = [
         # flight controls
@@ -39,20 +40,22 @@ class Control:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.connect(dummy_host)
             ip = sock.getsockname()[0]
-        assert ip.startswith(
-            Config.drone_ip[:10]), f"Please connect to the tello (ip: {ip})"
+
+        assert ip.startswith(Config.drone_ip[:10]),f"""
+        Please connect to the tello drone (current IP is {ip})"""
         return ip
 
     def init(self):
         addr = (self.get_my_own_ip(), Config.controller_port)
-        print('bind', addr, 'and connect to', self.drone_addr)
+        print(f"bind {addr} and connect to {self.drone_addr}")
         try:
             self.sock.bind(addr)
             self.sock.connect(self.drone_addr)
         except OSError as e:
-            msg = "while binding %s:%s, " % addr + str(e)
-            raise OSError(msg)
-        response = self.send(b'command')
+            raise OSError(f"Error while binding {addr}: {e}")
+
+        init_command = Command('command')
+        response = self.send(init_command)
         self.initialized = response == Config.OK
         return self
 
@@ -64,7 +67,7 @@ class Control:
                     self._response, ip = self.sock.recvfrom(128)
                     break
                 except Exception as e:
-                    print("recv_thread Exception '%s', exiting.." % e)
+                    print(f"recv_thread Exception '{e}', exiting..")
                     self._response = Config.ERROR
                     break
 
@@ -76,14 +79,12 @@ class Control:
         # receiver timed out if is still alive (maybe the connection broke?)
         return Config.TIMEOUT if receiver.isAlive() else self._response
 
-    def check_command(self, cmd: bytes):
-        assert self.initialized or cmd == b'command'
-        assert cmd in self.valid_commands, "%s not in %s" % (
-            cmd, self.valid_commands)
+    def check_command(self, cmd: Command):
+        assert self.initialized or cmd.is_init_command()
 
-    def send(self, cmd: bytes):
+    def send(self, cmd: Command):
         self.check_command(cmd)
-        self.sock.sendall(cmd)
+        self.sock.sendall(cmd.tobytes())
         response = self.wait_for_response()
-        print(self.drone_addr, "upon '%s':" % cmd, response)
+        print(f"{self.drone_addr} upon '{cmd}': {response}")
         return response
