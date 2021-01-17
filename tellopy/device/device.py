@@ -9,7 +9,7 @@ class Device:
 
     @classmethod
     def init(cls, *args, **kwargs):
-        socket = CommandSocket() 
+        socket = CommandSocket()
         socket.init()
         return cls(socket, *args, **kwargs)
 

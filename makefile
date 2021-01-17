@@ -1,13 +1,13 @@
 .PHONY: lint lint.fix static_analysis test install install.dev init.conda
 
 check.linting:
-	flake8 tellopy
+	flake8 tellopy/ tests/
 
 check.linting.fix:
-	autopep8 -r -i tellopy/
+	autopep8 -r -i tellopy/ tests/
 
 check.types:
-	mypy --ignore-missing-imports tellopy
+	mypy --ignore-missing-imports tellopy/ tests/
 
 check.integration:
 	python -m pytest -x tests/integration

@@ -1,5 +1,5 @@
 
-from socket import socket
+from socket import socket, AF_INET
 from threading import Thread
 
 from .config import Config
@@ -37,7 +37,7 @@ class CommandSocket:
 
     def init(self):
         ip = get_own_ip()
-        assert ip.startswith(Config.drone_ip[:10]),f"""
+        assert ip.startswith(Config.drone_ip[:10]), f"""
         Please connect to the tello drone (current IP is {ip})"""
         addr = (ip, Config.controller_port)
         print(f"bind {addr} and connect to {self.drone_addr}")
