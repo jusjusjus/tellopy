@@ -1,13 +1,17 @@
 class Command:
     level_1_commands = [
+        'emergency',
         'streamoff',
         'streamon',
         'command',
         'takeoff',
         'land',
+        'stop',
     ]
     level_2_commands = [
         'forward',
+        'right',
+        'left',
         'back',
         'down',
         'ccw',
@@ -50,6 +54,9 @@ class Command:
         instance = cls(string)
         instance.validate()
         return instance
+
+    def __repr__(self):
+        return f"Command('{self.command}')"
 
 
 # add the standard commands
