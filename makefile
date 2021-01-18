@@ -1,9 +1,17 @@
-.PHONY: lint lint.fix static_analysis test install install.dev init.conda
+.PHONY: start.manual start.manual.mockup \
+	    check.lint check.lint.fix check.types check.units check.integration \
+	    install install.dev init.conda
 
-check.linting:
+start.manual:
+	python -m tellopy.manual
+
+start.manual.mockup:
+	python -m tellopy.manual --mockup
+
+check.lint:
 	flake8 tellopy/ tests/
 
-check.linting.fix:
+check.lint.fix:
 	autopep8 -r -i tellopy/ tests/
 
 check.types:
@@ -14,9 +22,6 @@ check.integration:
 
 check.units:
 	python -m pytest -x tests/unit
-
-test:
-	pytest -x
 
 init.conda:
 	conda create -y -n tello python=3.6
