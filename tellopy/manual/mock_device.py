@@ -7,9 +7,9 @@ class Device:
         Command.level_2_commands
 
     def __getattr__(self, a):
-        def fn():
+        def fn(*args):
             sleep(0.5)
-            return a
+            return a + ' ' + ' '.join(map(str, args))
 
         return fn
 

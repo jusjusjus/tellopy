@@ -69,3 +69,7 @@ class Device:
     def cw(self, degrees: int = 45):
         cmd = Command.cw(degrees)  # type: ignore
         return self.socket.send(cmd)
+
+    def rc(self, right: int, forward: int, up: int, yaw: int):
+        cmd = Command.cw(right, forward, up, yaw)  # type: ignore
+        return self.socket.send(cmd)

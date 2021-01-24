@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMainWindow
 from .keyboard import Keyboard
-from .button_control import ButtonControl
 from .device import Device
 from .mock_device import Device as MockDevice
+from .controls import Controls
 
 
 def parse_args():
@@ -23,7 +23,10 @@ if __name__ == "__main__":
     keyboard = Keyboard()
 
     app = QApplication([])
-    buttons = ButtonControl(device, keyboard)
-    buttons.show()
-    print(buttons.keyboard)
+
+    main = QMainWindow()
+    controls = Controls(device, keyboard)
+    main.setCentralWidget(controls)
+
+    main.show()
     app.exec_()

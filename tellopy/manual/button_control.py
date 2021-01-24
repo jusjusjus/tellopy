@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QDialog, QGridLayout, QPushButton
+from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton
 
 
-class ButtonControl(QDialog):
+class ButtonControl(QWidget):
 
     def __init__(self, device, keyboard, *args, **kwargs):
         super().__init__(*args, **kwargs)

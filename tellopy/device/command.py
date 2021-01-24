@@ -61,7 +61,7 @@ def get_command_handler(command, argc):
     @classmethod
     def fn(cls, *args):
         assert len(args) == argc
-        string = command + ' '.join(*map(str, args))
+        string = f"{command} {' '.join(map(str, args))}"
         return cls.from_string(string)
 
     return fn
@@ -71,3 +71,5 @@ for command in Command.level_1_commands:
 
 for command in Command.level_2_commands:
     setattr(Command, command, get_command_handler(command, argc=1))
+
+Command.rc = lambda a, b, c, d: f"rc {a} {b} {c} {d}"
