@@ -11,7 +11,7 @@ from ..utils import get_own_ip
 class CommandSocket:
 
     drone_addr = (Config.drone_ip, Config.control_port)
-    response_timeout = 0.5
+    response_timeout = 2.5
 
     def __init__(self):
         self.initialized = False
