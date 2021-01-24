@@ -16,18 +16,44 @@ class ButtonControl(QDialog):
 
     def create_button_grid(self):
         button_grid = QGridLayout()
+        self.buttons = []
         for c, command in enumerate(self.device.commands):
             button = QPushButton(command)
-            action = getattr(self.device, command)
-            button.clicked.connect(action)
+            handler = self.get_trigger_handler(command)
+            button.clicked.connect(handler)
+            button_grid.addWidget(button, c // 4, c % 4)
+            self.buttons.append(button)
             for key in command:
                 try:
-                    self.keyboard.register(key, action)
+                    self.keyboard.register(key, handler)
                     break
                 except AssertionError as err:
                     print(f"Error while adding '{key}' for '{command}': {err}")
                     continue
 
-            button_grid.addWidget(button, c // 4, c % 4)
-
         return button_grid
+
+    def get_trigger_handler(self, command):
+        action = getattr(self.device, command)
+
+        def trigger_action():
+            self.disable(True)
+            response = action()
+            print(command, '->', response)
+            self.enable(True)
+
+        return trigger_action
+
+    def disable(self, draw=False):
+        for button in self.buttons:
+            button.setEnabled(False)
+
+        if draw:
+            self.repaint()
+
+    def enable(self, draw=False):
+        for button in self.buttons:
+            button.setEnabled(True)
+
+        if draw:
+            self.repaint()

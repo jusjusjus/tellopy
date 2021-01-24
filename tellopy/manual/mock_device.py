@@ -1,4 +1,5 @@
 from ..device.command import Command
+from time import sleep
 
 
 class Device:
@@ -8,7 +9,9 @@ class Device:
 
     def __getattr__(self, a):
         def fn():
-            print(a)
+            sleep(0.5)
+            return a
+
         return fn
 
     @classmethod

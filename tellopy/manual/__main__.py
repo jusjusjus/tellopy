@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from PyQt5.QtWidgets import QApplication
 from .keyboard import Keyboard
-from .control import ButtonControl
+from .button_control import ButtonControl
 from .device import Device
 from .mock_device import Device as MockDevice
 
