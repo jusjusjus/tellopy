@@ -14,12 +14,10 @@ class Command:
         'left',
         'back',
         'down',
+        'flip',
         'ccw',
         'up',
         'cw',
-    ]
-    level_3_commands = [
-        'flip',
     ]
 
     def __init__(self, command: str):
@@ -41,10 +39,7 @@ class Command:
             assert split[0] in self.level_1_commands
         elif len(split[0]) == 2:
             command, value = split
-            if command in self.level_2_commands:
-                assert value.isnumeric()
-            elif command in self.level_3_commands:
-                assert value == 'b'
+            assert command in self.level_2_commands
 
     def is_init_command(self):
         return self.command == 'command'
@@ -59,21 +54,20 @@ class Command:
         return f"Command('{self.command}')"
 
 
-# add the standard commands
-for command in Command.level_1_commands:
-    setattr(Command, command, Command.from_string(command))
+def get_command_handler(command, argc):
+    if argc == 0:
+        return Command.from_string(command)
 
-
-def level_2_command_fn(command):
     @classmethod
-    def fn(cls, value):
-        return cls.from_string(f"{command} {value}")
+    def fn(cls, *args):
+        assert len(args) == argc
+        string = command + ' '.join(*map(str, args))
+        return cls.from_string(string)
 
     return fn
 
+for command in Command.level_1_commands:
+    setattr(Command, command, get_command_handler(command, argc=0))
 
 for command in Command.level_2_commands:
-    setattr(Command, command, level_2_command_fn(command))
-
-for command in Command.level_3_commands:
-    setattr(Command, command, level_2_command_fn(command))
+    setattr(Command, command, get_command_handler(command, argc=1))

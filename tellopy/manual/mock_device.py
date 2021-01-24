@@ -4,8 +4,7 @@ from time import sleep
 
 class Device:
     commands = Command.level_1_commands + \
-        Command.level_2_commands + \
-        Command.level_3_commands
+        Command.level_2_commands
 
     def __getattr__(self, a):
         def fn():

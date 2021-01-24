@@ -7,8 +7,7 @@ class Device(_Device):
     _rotate_angle = 30
     _flip_direction = 'b'
     commands = Command.level_1_commands + \
-        Command.level_2_commands + \
-        Command.level_3_commands
+        Command.level_2_commands
 
     def left(self):
         super().left(self._move_distance)
